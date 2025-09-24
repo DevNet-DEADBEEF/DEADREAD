@@ -22,9 +22,14 @@ const string word_deilmiters = " \n\t\r,;:\"'()[]{}<>-";
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2) {
-        cerr << "Usage: " << argv[0] << " <filename>" << endl;
+    bool quiet = false;
+    if (argc < 2) {
+        cerr << "Usage: " << argv[0] << " <filename> [-q]" << endl;
         return -1;
+    }
+    if (argc == 3 && string(argv[2]) == "-q") {
+        // quiet mode, dont print
+        quiet = true;
     }
     size_t length;
     auto f = map_file(argv[1], length);
@@ -86,14 +91,17 @@ int main(int argc, char* argv[])
     double avg_sentance_length = num_sentences > 0 ? static_cast<double>(sum_sentances) / num_sentences : 0.0;
 
     // delete the variables sum_sentances and num_sentences
-    cout << avg_sentance_length;
+    if (!quiet)
+        cout << avg_sentance_length;
 
     // sort the words
     auto sorted_words = top_five(word_count);
-    for (const auto& w : sorted_words) {
-        cout << " " << w;
+    if (!quiet) {
+        for (const auto& w : sorted_words) {
+            cout << " " << w;
+        }
+        cout << endl;
     }
-    cout << endl;
     return 0;
 }
 
