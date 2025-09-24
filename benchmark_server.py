@@ -22,7 +22,7 @@ def mark():
         if file.endswith('.txt'):
             file_path = os.path.join(root_dir, file)
             start_time = time.perf_counter_ns()
-            subprocess.Popen(f"./main {file_path}", shell=True, stdout=None, stderr=None).wait()
+            subprocess.Popen(f"./main {file_path} -q", shell=True, stdout=None, stderr=None).wait()
             end_time = time.perf_counter_ns()
             elapsed_time = (end_time - start_time) / 1_000_000  # Convert to milliseconds
             times.append(elapsed_time)
