@@ -59,6 +59,6 @@ thread = threading.Thread(target=thread_mark, daemon=True)
 thread.start()
 print("Started background benchmarking thread.")
 
-httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
-print("Starting server on http://localhost:8000")
+httpd = HTTPServer(('localhost', 42789), SimpleHTTPRequestHandler)
+print("Starting server on http://localhost:42789")
 httpd.serve_forever()
