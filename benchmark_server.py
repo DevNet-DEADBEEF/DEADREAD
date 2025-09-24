@@ -15,6 +15,7 @@ def mark():
     times = []
 
     subprocess.call("git pull", shell=True)
+    subprocess.call("make -f ./MakeFile.mk all", shell=True)
 
     root_dir = sys.argv[1]
     for file in os.listdir(root_dir):
