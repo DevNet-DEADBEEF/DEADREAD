@@ -9,13 +9,16 @@ import threading
 
 mark_cache = None
 mark_cache_time = 0
+git_eval = None
 
 
 def mark():
+    global git_eval
     times = []
 
     subprocess.call("git pull", shell=True)
     subprocess.call("make -f ./MakeFile.mk all", shell=True)
+    git_eval = subprocess.check_output("git log HEAD -n 1", shell=True).decode('utf-8').strip()
 
     root_dir = sys.argv[1]
     for file in os.listdir(root_dir):
@@ -53,7 +56,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         if mark_cache is None:
             self.wfile.write(b"Benchmarking in progress, please wait...")
         else:
-            response = f"Last Benchmark at {mark_cache_time}\n{mark_cache}"
+            response = f"Last Benchmark at {mark_cache_time}\nOn {git_eval}\n{mark_cache}"
             self.wfile.write(response.encode('utf-8'))
 
 thread = threading.Thread(target=thread_mark, daemon=True)
