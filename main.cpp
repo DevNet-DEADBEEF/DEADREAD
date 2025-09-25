@@ -10,12 +10,14 @@ using namespace std;
 
 const char* read_file(const char* fname);
 const char* c_read_file(char* filename);
+const char* c_read_file_dynamic(char* fname);
 
 // for mmap:
 #include <cstdint>
 #include "mman.h"
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/stat.h> // stat
 
 using namespace std;
 
@@ -26,6 +28,7 @@ const string start_string = "*** START OF THIS PROJECT GUTENBERG EBOOK ";
 const string end_string = "*** END OF THIS PROJECT GUTENBERG EBOOK ";
 const string sentence_end_chars = ".!?";
 const string word_deilmiters = " \n\t\r,;:\"'()[]{}<>-";
+
 
 int main(int argc, char* argv[])
 {
@@ -156,6 +159,47 @@ const char* c_read_file(char* filename) {
 
 		while (!feof(fp)) {  // Until the end of the file
 			int read = fread(buffer, sizeof(char), BUFSIZE, fp);  // Read the next BUFSIZE characters from the file
+			output = (char*)realloc(output, total + read);   // Note:  skipping error handling from realloc!
+			memcpy(output + total, buffer, read);  // Copy what was read to the end of the output buffer
+			total += read;  // Keep track of the total read
+		}
+		fclose(fp);
+
+		output = (char*)realloc(output, total + 1);   // Note:  skipping error handling from realloc!
+		output[total] = '\0';   // Null-terminate the string
+		//filelen = strlen(output);
+
+		return output;
+	}
+	else { // File does not exist or cannot be read from
+		printf("Unable to access BLARG! source file '%s'", filename);
+		exit(-1);
+		return NULL;
+	}
+}
+
+long get_file_size(char *filename) {
+    struct stat file_status;
+    if (stat(filename, &file_status) < 0) {
+        return -1;
+    }
+
+    return file_status.st_size;
+}
+
+const char* c_read_file_dynamic(char* filename) {
+	// Get file and verify access
+	FILE* fp = fopen(filename, "r");
+
+
+	if (fp != NULL) { // File exists and is readable
+        const long bufsize = get_file_size(filename);
+		char buffer[bufsize * sizeof(char)];
+		char* output = NULL;
+		int total = 0;
+
+		while (!feof(fp)) {  // Until the end of the file
+			int read = fread(buffer, sizeof(char), bufsize, fp);  // Read the next BUFSIZE characters from the file
 			output = (char*)realloc(output, total + read);   // Note:  skipping error handling from realloc!
 			memcpy(output + total, buffer, read);  // Copy what was read to the end of the output buffer
 			total += read;  // Keep track of the total read
