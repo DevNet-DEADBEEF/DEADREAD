@@ -2,17 +2,17 @@
 GPP = g++
 
 # Compilation flags
-GPPFlags = -Wall -Wextra -Werror -Wfatal-errors -std=c++23 -O3
+GPPFlags = -Wall -Wextra -Werror -Wfatal-errors -std=c++23 -Ofast
 Debug = -g
 
-SRC = $(wildcard *.cpp)
+SRC = main.cpp #$(wildcard *.cpp)
 
 HEADER = $(wildcard *.h)
 
 OBJ = $(SRC:.cpp=.o)
 
 # Target Name
-TARGET = main
+TARGET = main.exe
 
 # compile
 $(OBJ): $(SRC) $(OBJ)
@@ -20,9 +20,10 @@ $(OBJ): $(SRC) $(OBJ)
 
 # clean
 clean:
-	rm -f $(TARGET) $(OBJ)
+	if exist $(TARGET) del $(TARGET)
+	if exist *.o del *.o
 	@echo "Removed all object files."
 
 all: clean
 	$(GPP) $(GPPFlags) main.cpp -o $(TARGET)
-	$(GPP) $(GPPFlags) testing.cpp -o testing
+	$(GPP) $(GPPFlags) testing.cpp -o testing.exe

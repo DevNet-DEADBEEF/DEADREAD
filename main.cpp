@@ -3,10 +3,17 @@
 #include <cstring>
 #include <vector>
 #include <unordered_map>
+#include <fstream>
+#include <memory>
+
+using namespace std;
+
+const char* read_file(const char* fname);
+const char* c_read_file(char* filename);
 
 // for mmap:
 #include <cstdint>
-#include <sys/mman.h>
+#include "mman.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -31,9 +38,16 @@ int main(int argc, char* argv[])
         // quiet mode, dont print
         quiet = true;
     }
-    size_t length;
-    auto f = map_file(argv[1], length);
-    auto l = f + length;
+    //size_t length;
+    //auto file_data = read_file(argv[1], length);
+    string file_data(read_file(argv[1]));
+
+    if (file_data.empty()) {
+        cerr << "Error reading file: " << argv[1] << endl;
+        return -1;
+    }
+    //auto f = file_data.get();
+    //auto l = f + length;
 
     unsigned long sum_sentances = 0;
     int num_sentences = 0;
@@ -43,17 +57,17 @@ int main(int argc, char* argv[])
     string current_word;
 
     // loop over the file
-    for (auto p = f; p != l; ++p) {
-        char c = *p;
+    for (long long unsigned int i = 0; i < file_data.length(); i++) { // why does length use a long long unsigned int...
+        char c = file_data[i];
 
         // skip until start string is found
-        if (p + start_string.size() < l && string(p, p + start_string.size()) == start_string) {
-            p += start_string.size();
+        if (file_data.substr(i, start_string.size()) == start_string) {
+            i += start_string.size();
             continue;
         }
 
         // stop when end string is found
-        if (p + end_string.size() < l && string(p, p + end_string.size()) == end_string) {
+        if (file_data.substr(i, end_string.size()) == end_string) {
             break;
         }
 
@@ -82,11 +96,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    // close the file
-    if (munmap(const_cast<char*>(f), length) == -1) {
-        cerr << "Error un-mmapping the file" << endl;
-        return -1;
-    }
+    // file_data will be **NOT** automatically cleaned up when it goes out of scope
+    file_data.clear();
 
     double avg_sentance_length = num_sentences > 0 ? static_cast<double>(sum_sentances) / num_sentences : 0.0;
 
@@ -102,77 +113,89 @@ int main(int argc, char* argv[])
         }
         cout << endl;
     }
+
     return 0;
 }
 
 void handle_error(const char* msg) {
-    perror(msg);
+    cerr << "Error: " << msg << endl;
     exit(255);
 }
 
-const char* map_file(const char* fname, size_t& length)
-{
-    int fd = open(fname, O_RDONLY);
-    if (fd == -1)
-        handle_error("open");
+const char* read_file(const char* fname) {
+    size_t length;
+    ifstream file(fname, ios::binary | ios::ate);
+    if (!file) {
+        handle_error("Could not open file");
+    }
 
-    // obtain file size
-    struct stat sb{};
-    if (fstat(fd, &sb) == -1)
-        handle_error("fstat");
+    length = static_cast<size_t>(file.tellg());
+    file.seekg(0, ios::beg);
 
-    length = sb.st_size;
+    char* buffer = new char[length];
+    if (!file.read(buffer, static_cast<streamsize>(length))) {
+        delete[] buffer;
+        handle_error("Could not read file");
+    }
 
-    const char* addr = static_cast<const char*>(mmap(NULL, length, PROT_READ, MAP_PRIVATE, fd, 0u));
-    if (addr == MAP_FAILED)
-        handle_error("mmap");
-
-    return addr;
+    return buffer;
 }
 
-void vec_insert(vector<int> &vec, int pos, int val) {
-    vec.insert(vec.begin() + pos, val);
-    vec.erase(vec.end() - 1, vec.end());
-}
+const int BUFSIZE = 4096;
+const char* c_read_file(char* filename) {
+	// Get file and verify access
+	FILE* fp = fopen(filename, "r");
 
-void vec_insert(vector<string> &vec, int pos, const string& val) {
-    vec.insert(vec.begin() + pos, val);
-    vec.erase(vec.end() - 1, vec.end());
-}
 
-bool vec_cont(vector<string> &vec, const string &val) {
-    return find(vec.begin(), vec.end(), val) != vec.end();
+	if (fp != NULL) { // File exists and is readable
+		char buffer[BUFSIZE * sizeof(char)];
+		char* output = NULL;
+		int total = 0;
+
+		while (!feof(fp)) {  // Until the end of the file
+			int read = fread(buffer, sizeof(char), BUFSIZE, fp);  // Read the next BUFSIZE characters from the file
+			output = (char*)realloc(output, total + read);   // Note:  skipping error handling from realloc!
+			memcpy(output + total, buffer, read);  // Copy what was read to the end of the output buffer
+			total += read;  // Keep track of the total read
+		}
+		fclose(fp);
+
+		output = (char*)realloc(output, total + 1);   // Note:  skipping error handling from realloc!
+		output[total] = '\0';   // Null-terminate the string
+		//filelen = strlen(output);
+
+		return output;
+	}
+	else { // File does not exist or cannot be read from
+		printf("Unable to access BLARG! source file '%s'", filename);
+		exit(-1);
+		return NULL;
+	}
 }
 
 vector<string> top_five(const unordered_map<string, int>& words) {
-    vector counts = {-1, -1, -1, -1, -1};
-    vector<string> word = {"..", "..", "..", "..", ".."};
-
+    // Create vector of pairs (count, word) for sorting
+    vector<pair<int, string>> word_counts;
+    word_counts.reserve(words.size());
+    
     for (const auto& pair : words) {
-        if (pair.second > counts[4]) {
-            if (pair.second > counts[3]) {
-                if (pair.second > counts[2]) {
-                    if (pair.second > counts[1]) {
-                        if (pair.second > counts[0]) {
-                            vec_insert(counts, 0, pair.second);
-                            vec_insert(word, 0, pair.first);
-                        } else {
-                            vec_insert(counts, 1, pair.second);
-                            vec_insert(word, 1, pair.first);
-                        }
-                    } else {
-                        vec_insert(counts, 2, pair.second);
-                        vec_insert(word, 2, pair.first);
-                    }
-                } else {
-                    vec_insert(counts, 3, pair.second);
-                    vec_insert(word, 3, pair.first);
-                }
-            } else {
-                vec_insert(counts, 4, pair.second);
-                vec_insert(word, 4, pair.first);
-            }
-        }
+        word_counts.emplace_back(pair.second, pair.first);
     }
-    return word;
+    
+    // Sort by count (descending) - only need top 5
+    partial_sort(word_counts.begin(), 
+                 word_counts.begin() + min(5, static_cast<int>(word_counts.size())), 
+                 word_counts.end(), 
+                 greater<pair<int, string>>());
+    
+    // Extract just the words
+    vector<string> result;
+    const int num_words = min(5, static_cast<int>(word_counts.size()));
+    result.reserve(num_words);
+    
+    for (int i = 0; i < num_words; ++i) {
+        result.push_back(word_counts[i].second);
+    }
+    
+    return result;
 }
