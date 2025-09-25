@@ -17,7 +17,7 @@ def mark():
     times = []
 
     subprocess.call("git pull", shell=True)
-    subprocess.call("make -f ./MakeFile.mk all", shell=True)
+    subprocess.call("make -f ./MakeFile all", shell=True)
     git_eval = subprocess.check_output("git log HEAD -n 1", shell=True).decode('utf-8').strip()
 
     root_dir = sys.argv[1]

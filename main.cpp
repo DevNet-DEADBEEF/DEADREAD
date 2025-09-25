@@ -127,7 +127,6 @@ const char* map_file(const char* fname, size_t& length)
     if (addr == MAP_FAILED)
         handle_error("mmap");
 
-    // TODO close fd at some point in time, call munmap(...)
     return addr;
 }
 
@@ -151,9 +150,9 @@ vector<string> top_five(const unordered_map<string, int>& words) {
 
     for (const auto& pair : words) {
         // skip words already in top_words
-        if (vec_cont(word, pair.first)) {
-            continue;
-        }
+        // if (vec_cont(word, pair.first)) {
+        //     continue;
+        // }
         if (pair.second > counts[4]) {
             if (pair.second > counts[3]) {
                 if (pair.second > counts[2]) {
