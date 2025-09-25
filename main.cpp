@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <memory>
+#include <chrono>
 
 using namespace std;
 
@@ -18,6 +19,7 @@ const char* c_read_file_dynamic(char* fname);
 #include <sys/stat.h> // stat
 
 using namespace std;
+using namespace chrono;
 
 const char* map_file(const char* fname, size_t& length);
 vector<string> top_five(const unordered_map<string, int>& words);
@@ -28,8 +30,21 @@ const string sentence_end_chars = ".!?";
 const string word_deilmiters = " \n\t\r,;:\"'()[]{}<>-";
 
 
+double times2double(time_point<high_resolution_clock> start, time_point<high_resolution_clock> end) {
+    return duration_cast<duration<double>>(end - start).count() * 1000.0;
+}
+
+time_point<high_resolution_clock> time_now() {
+    return high_resolution_clock::now();
+}
+
 int main(int argc, char* argv[])
 {
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
     bool quiet = false;
     if (argc < 2) {
         cerr << "Usage: " << argv[0] << " <filename> [-q]" << endl;
@@ -39,6 +54,8 @@ int main(int argc, char* argv[])
         // quiet mode, dont print
         quiet = true;
     }
+
+    auto t1 = time_now();
     //size_t length;
     //auto file_data = read_file(argv[1], length);
     const char* raw_file_data = read_file(argv[1]);
@@ -58,6 +75,10 @@ int main(int argc, char* argv[])
 
     vector<string> buffer;
     string current_word;
+    auto t2 = time_now();
+    if (!quiet)
+        clog << "File opened in " << times2double(t1, t2) << "ms" << endl;
+    t1 = time_now();
 
     // loop over the file
     for (long long unsigned int i = 0; i < file_data.length(); i++) { // why does length use a long long unsigned int...
@@ -98,6 +119,10 @@ int main(int argc, char* argv[])
             }
         }
     }
+    t2 = time_now();
+    if (!quiet)
+        clog << "File processed in " << times2double(t1, t2) << "ms" << endl;
+    t1 = time_now();
 
     // file_data will be **NOT** automatically cleaned up when it goes out of scope
     file_data.clear();
@@ -116,6 +141,9 @@ int main(int argc, char* argv[])
         }
         cout << endl;
     }
+    t2 = time_now();
+    if (!quiet)
+        clog << "Results computed in " << times2double(t1, t2) << "ms" << endl;
 
     return 0;
 }
