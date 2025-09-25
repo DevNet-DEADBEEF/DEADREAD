@@ -12,8 +12,6 @@ const char* read_file(const char* fname);
 const char* c_read_file(char* filename);
 
 // for mmap:
-#include <cstdint>
-#include "mman.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -40,7 +38,7 @@ int main(int argc, char* argv[])
     }
     //size_t length;
     //auto file_data = read_file(argv[1], length);
-    const char* raw_file_data = c_read_file(argv[1]);
+    const char* raw_file_data = read_file(argv[1]);
     string file_data(raw_file_data);
     free((void*)raw_file_data);
 

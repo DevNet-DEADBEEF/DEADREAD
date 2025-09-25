@@ -24,6 +24,10 @@ clean:
 	if exist *.o del *.o
 	@echo "Removed all object files."
 
-all: clean
+main:
 	$(GPP) $(GPPFlags) main.cpp -o $(TARGET)
+
+testing:
 	$(GPP) $(GPPFlags) testing.cpp -o testing.exe
+
+all: clean main testing
