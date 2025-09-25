@@ -149,10 +149,6 @@ vector<string> top_five(const unordered_map<string, int>& words) {
     vector<string> word = {"..", "..", "..", "..", ".."};
 
     for (const auto& pair : words) {
-        // skip words already in top_words
-        // if (vec_cont(word, pair.first)) {
-        //     continue;
-        // }
         if (pair.second > counts[4]) {
             if (pair.second > counts[3]) {
                 if (pair.second > counts[2]) {
