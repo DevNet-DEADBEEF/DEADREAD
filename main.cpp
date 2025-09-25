@@ -40,7 +40,9 @@ int main(int argc, char* argv[])
     }
     //size_t length;
     //auto file_data = read_file(argv[1], length);
-    string file_data(read_file(argv[1]));
+    const char* raw_file_data = c_read_file(argv[1]);
+    string file_data(raw_file_data);
+    free((void*)raw_file_data);
 
     if (file_data.empty()) {
         cerr << "Error reading file: " << argv[1] << endl;
