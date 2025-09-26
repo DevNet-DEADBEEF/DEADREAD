@@ -1,5 +1,9 @@
 /GOLparser
 ./books
+
+*
+!/**/
+!*.*
 *.txt
 *.exe
 *.o
