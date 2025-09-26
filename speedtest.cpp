@@ -32,11 +32,9 @@ static void wc(char const *fname)
     posix_fadvise(fd, 0, 0, 1);  // FDADVICE_SEQUENTIAL
 
     char buf[BUFFER_SIZE + 1];
-    uintmax_t lines = 0;
 
     long sentenceSum = 0;
     long sentenceNum = 0;
-    long wordNum = 0;
 
     bool inBook = false;
     bool inHeader = false;
@@ -189,5 +187,9 @@ static void wc(char const *fname)
 
 int main(int argc, char* argv[])
 {
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>\n";
+        return 1;
+    }
     wc(argv[1]);
 }
