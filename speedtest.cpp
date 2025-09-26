@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstring>
 #include <vector>
+#include <tr1/unordered_map>
 
 // for mmap:
 #include <sys/stat.h>
@@ -20,7 +21,7 @@ void handle_error(const char* msg) {
     exit(255);
 }
 
-static uintmax_t wc(char const *fname)
+static void wc(char const *fname)
 {
     static const auto BUFFER_SIZE = 16*1024;
     int fd = open(fname, O_RDONLY);
@@ -40,8 +41,12 @@ static uintmax_t wc(char const *fname)
     bool inBook = false;
     bool inHeader = false;
 
+    std::vector<std::string> shortest_sentence = {};
+    std::vector<std::string> longest_sentence = {};
+
     std::vector<std::string> sentencebuf = {};
     std::vector<char> wordbuf = {};
+    std::tr1::unordered_map<std::string, int> word_count;
 
     while(size_t bytes_read = read(fd, buf, BUFFER_SIZE))
     {
@@ -67,24 +72,18 @@ static uintmax_t wc(char const *fname)
                 if (!inHeader) {
                     if (buf[i] == '*') {
                         // Potential start of header
-                        if (i + START_STRING.size() < bytes_read) {
+                        if (i + START_STRING.size() <= bytes_read) {
                             std::string potential_start(&buf[i], START_STRING.size());
                             if (potential_start == START_STRING) {
                                 inHeader = true;
                                 // std::cout << "Start of header\n";
-                            }
-                        } else if (i + END_STRING.size() < bytes_read) {
-                            std::string potential_end(&buf[i], END_STRING.size());
-                            if (potential_end == END_STRING) {
-                                break;  // End of book reached
-                                // std::cout << "End of book\n";
                             }
                         }
                     }
                 } else {
                     if (buf[i] == '*') {
                         // Potential end of header
-                        if (buf[i + 1] == '*' && buf[i + 2] == '*') {
+                        if (i + 2 < bytes_read && buf[i + 1] == '*' && buf[i + 2] == '*') {
                             inHeader = false;
                             inBook = true;
                             i += 2;  // Skip the next two asterisks
@@ -93,7 +92,18 @@ static uintmax_t wc(char const *fname)
                     }
                 }
                 continue;
-            } 
+            } else {
+                if (buf[i] == '*') {
+                    // Potential end of book
+                    if (i + END_STRING.size() <= bytes_read) {
+                        std::string potential_end(&buf[i], END_STRING.size());
+                        if (potential_end == END_STRING) {
+                            inBook = false;
+                            // std::cout << "End of book\n";
+                        }
+                    }
+                }
+            }
 
             bool isPunct = std::find(PUNCTUATION.begin(), PUNCTUATION.end(), buf[i]) != PUNCTUATION.end();
 
@@ -104,12 +114,30 @@ static uintmax_t wc(char const *fname)
                     continue;
                 }
                 // std::cout << "Word: " << std::string(wordbuf.begin(), wordbuf.end()) << "\n";
-                sentencebuf.push_back(std::string(wordbuf.begin(), wordbuf.end()));
+                std::string word(wordbuf.begin(), wordbuf.end());
                 wordbuf.clear();
+
+                if (word_count.find(word) == word_count.end()) {
+                    word_count[word] = 1;
+                } else {
+                    word_count[word]++;
+                }
+
+                sentencebuf.push_back(word);
                 if (isPunct) {
-                    if (sentencebuf.empty() || sentencebuf.size() <= 1) {
+                    if (sentencebuf.size() <= 1) {
+                        if (!sentencebuf.empty()) sentencebuf.clear();
                         continue;
                     }
+
+                    if (shortest_sentence.empty() || sentencebuf.size() < shortest_sentence.size()) {
+                        shortest_sentence = sentencebuf;
+                    }
+
+                    if (longest_sentence.empty() || sentencebuf.size() > longest_sentence.size()) {
+                        longest_sentence = sentencebuf;
+                    }
+
                     ++sentenceNum;
                     sentenceSum += sentencebuf.size();
                     sentencebuf.clear();
@@ -117,6 +145,35 @@ static uintmax_t wc(char const *fname)
             } 
         }
     }
+
+    std::cout << "Top 5 most common words:\n";
+    std::vector<std::string> top_words = {};
+
+    for (const auto& i : word_count) {
+        if (top_words.size() > 0 && word_count[top_words[1]] < i.second) {
+            top_words.insert(top_words.begin(), i.first);
+        } else if (top_words.size() < 5) {
+            top_words.push_back(i.first);
+        } else if (top_words.size() > 5) {
+            top_words.pop_back();
+        }
+    }
+
+    for (size_t i = 0; i < top_words.size(); ++i) {
+        std::cout << top_words[i] << ": " << word_count[top_words[i]] << "\n";
+    }
+
+    std::cout << "Shortest sentence (" << shortest_sentence.size() << " words): ";
+    for (const auto& word : shortest_sentence) {
+        std::cout << word << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "Longest sentence (" << longest_sentence.size() << " words): ";
+    for (const auto& word : longest_sentence) {
+        std::cout << word << " ";
+    }
+    std::cout << "\n";
 
     std::cout << "Total sentences: " << sentenceNum << "\n";
     std::cout << "Average words per sentence: " << (sentenceNum ? (double)sentenceSum / sentenceNum : 0) << "\n";
@@ -128,14 +185,9 @@ static uintmax_t wc(char const *fname)
         handle_error("close failed");
 
     //std::cout << buf << "\n";
-
-    return lines;
 }
 
 int main(int argc, char* argv[])
 {
-
-    uintmax_t m_numLines = wc(argv[1]);
-
-    std::cout << "m_numLines = " << m_numLines << "\n";
+    wc(argv[1]);
 }

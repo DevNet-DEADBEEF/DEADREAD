@@ -25,9 +25,13 @@ clean:
 	@echo "Removed all object files."
 
 main:
-	$(GPP) $(GPPFlags) main.cpp -o $(TARGET)
+	$(GPP) $(GPPFlags) main.cpp -o $(TARGET) -Ofast
 
 testing:
-	$(GPP) $(GPPFlags) testing.cpp -o testing.exe
+	$(GPP) $(GPPFlags) testing.cpp -o testing.exe -Ofast
 
-all: clean main testing
+speedtest: 
+	rm -f ./speedtest
+	$(GPP) $(GPPFlags) speedtest.cpp -o speedtest -Ofast
+
+all: clean main testing speedtest
