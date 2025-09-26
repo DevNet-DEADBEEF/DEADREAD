@@ -12,9 +12,7 @@
 #include <fcntl.h>
 
 const std::string START_STRING = "*** START OF THIS PROJECT GUTENBERG EBOOK ";
-const std::string END_STRING = "*** END OF THIS PROJECT GUTENBERG EBOOK ";
-
-const std::vector<char> PUNCTUATION = {'.', '!', '?', '"'};
+const std::string END_STRING = "*** END ";
 
 void handle_error(const char* msg) {
     perror(msg); 
@@ -38,9 +36,12 @@ static void wc(char const *fname)
 
     bool inBook = false;
     bool inHeader = false;
+    bool exitting = false;
 
     std::vector<std::string> shortest_sentence = {};
     std::vector<std::string> longest_sentence = {};
+    std::string smallest_word = {};
+    std::string largest_word = {};
 
     std::vector<std::string> sentencebuf = {};
     std::vector<char> wordbuf = {};
@@ -65,6 +66,11 @@ static void wc(char const *fname)
 
         // Parse words and sentences
         for (size_t i = 0; i < bytes_read; ++i) {
+            if (exitting) {
+                break;
+            }
+
+            bool isPunct = (buf[i] == '.' || buf[i] == '!' || buf[i] == '?' || buf[i] == '"');
 
             if (!inBook) {
                 if (!inHeader) {
@@ -97,23 +103,36 @@ static void wc(char const *fname)
                     std::string potential_end(&buf[i], END_STRING.size());
                     if (potential_end == END_STRING) {
                         inBook = false;
+                        exitting = true;
+                        isPunct = true;
                         // std::cout << "End of book\n";
                     }
                 }
-                break;
             }
 
-            bool isPunct = std::find(PUNCTUATION.begin(), PUNCTUATION.end(), buf[i]) != PUNCTUATION.end();
+            bool isDelimiter = (buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\t'  || buf[i] == '\r' || isPunct);
 
             if (isalnum(buf[i])) {
                 wordbuf.push_back(buf[i]);
-            } else if (buf[i] == ' ' || isPunct) {
+            } else if (buf[i] == '\'' || buf[i] == '-') {
                 if (wordbuf.empty()) {
                     continue;
                 }
+                wordbuf.push_back(buf[i]);
+            } else if (isDelimiter && !wordbuf.empty()) {
                 // std::cout << "Word: " << std::string(wordbuf.begin(), wordbuf.end()) << "\n";
                 std::string word(wordbuf.begin(), wordbuf.end());
                 wordbuf.clear();
+
+                std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+
+                if (smallest_word.empty() || word.size() < smallest_word.size()) {
+                    smallest_word = word;
+                }
+
+                if (largest_word.empty() || word.size() > largest_word.size()) {
+                    largest_word = word;
+                }
 
                 if (word_count.find(word) == word_count.end()) {
                     word_count[word] = 1;
@@ -122,25 +141,25 @@ static void wc(char const *fname)
                 }
 
                 sentencebuf.push_back(word);
-                if (isPunct) {
-                    if (sentencebuf.size() <= 1) {
-                        if (!sentencebuf.empty()) sentencebuf.clear();
-                        continue;
-                    }
-
-                    if (shortest_sentence.empty() || sentencebuf.size() < shortest_sentence.size()) {
-                        shortest_sentence = sentencebuf;
-                    }
-
-                    if (longest_sentence.empty() || sentencebuf.size() > longest_sentence.size()) {
-                        longest_sentence = sentencebuf;
-                    }
-
-                    ++sentenceNum;
-                    sentenceSum += sentencebuf.size();
-                    sentencebuf.clear();
-                }
             } 
+            if (isPunct) {
+                if (sentencebuf.size() <= 1) {
+                    if (!sentencebuf.empty()) sentencebuf.clear();
+                    continue;
+                }
+
+                if (shortest_sentence.empty() || sentencebuf.size() < shortest_sentence.size()) {
+                    shortest_sentence = sentencebuf;
+                }
+
+                if (longest_sentence.empty() || sentencebuf.size() > longest_sentence.size()) {
+                    longest_sentence = sentencebuf;
+                }
+
+                ++sentenceNum;
+                sentenceSum += sentencebuf.size();
+                sentencebuf.clear();
+            }
         }
     }
 
@@ -188,6 +207,18 @@ static void wc(char const *fname)
     std::cout << "Total sentences: " << sentenceNum << "\n";
     std::cout << "Average words per sentence: " << (sentenceNum ? (double)sentenceSum / sentenceNum : 0) << "\n";
     std::cout << "Total words: " << sentenceSum << "\n";
+    std::cout << "Smallest word: " << smallest_word << " (" << smallest_word.size() << " characters)\n";
+    std::cout << "Largest word: " << largest_word << " (" << largest_word.size() << " characters)\n";
+    std::cout << "Unique words: " << word_count.size() - 1 << "\n";
+
+    std::vector<std::pair<std::string, int>> sorted_words(word_count.begin(), word_count.end());
+    std::sort(sorted_words.begin(), sorted_words.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+        return a.second > b.second; // Sort by frequency (descending)
+    });
+    for (const auto& w : sorted_words) {
+        if (w.first.empty()) continue;
+        std::cout << " - " << w.first << " (" << w.second << " occurrences)\n";
+    }
 
     std::cout << "Finished reading file\n";
 
