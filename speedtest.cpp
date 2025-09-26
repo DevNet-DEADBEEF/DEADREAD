@@ -38,7 +38,7 @@ static void wc(char const *fname)
         handle_error("open");
 
     /* Advise the kernel of our access pattern.  */
-    posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE);  // FDADVICE_SEQUENTIAL
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
 
     char buf[BUFFER_SIZE + 1];
 
