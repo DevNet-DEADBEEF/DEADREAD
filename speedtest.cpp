@@ -145,9 +145,10 @@ static void wc(char const *fname)
     }
 
     std::cout << "Top 5 most common words:\n";
-    std::vector<std::string> top_words = {};
+    std::vector<std::string> top_words;
+    top_words.resize(6);
 
-    for (const auto& i : word_count) {
+    for (const std::pair<const std::string, int>& i : word_count) {
         if (top_words.size() > 0 && word_count[top_words[1]] < i.second) {
             top_words.insert(top_words.begin(), i.first);
         } else if (top_words.size() < 5) {
