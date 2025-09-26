@@ -1,8 +1,34 @@
 import sys
 import re
+import argparse
 
-file = sys.argv[1]
-debug = "--debug" in sys.argv
+parser = argparse.ArgumentParser(
+    description="Analyze a Project Gutenberg ebook for average sentence length and top 5 words."
+)
+parser.add_argument(
+    "parse", help="Path to the Project Gutenberg ebook text file.",
+    nargs=2,
+)
+parser.add_argument(
+    "stats", help="Path to csv of ignored words",
+    nargs="*",
+    default="",
+)
+parser.add_argument(
+    "--debug", action="store_true", help="Enable debug output."
+)
+
+args = parser.parse_args()
+debug = args.debug
+if debug:
+    print(f"Args: {args}")
+
+file = args.parse[1]
+blacklist = set()
+if args.stats:
+    with open(args.stats[1], 'r', encoding='utf-8') as f:
+        file_text = f.read().replace('\n', '').lower()
+        blacklist = set(file_text.split(','))
 
 # Ebook format
 """
@@ -38,9 +64,10 @@ with open(file, 'r', encoding='utf-8') as f:
 
     for i, line in enumerate(lines):
         line = line.strip()
-        if line.startswith("*** START OF THIS PROJECT GUTENBERG EBOOK"):
+        if line.startswith("Title: "):
+            title = line.split("Title:")[-1].strip()
+        elif line.startswith("*** START OF THIS PROJECT GUTENBERG EBOOK"):
             in_ebook = True
-            title = line.split("EBOOK")[-1].strip().strip('*').strip()
             start_line = i + 1
             continue
         elif line.startswith("*** END OF THIS PROJECT GUTENBERG EBOOK"):
@@ -70,7 +97,7 @@ for sentence in sentences:
     sentence_len_sum += len(words)
     for word in words:
         word = clean_word(word)
-        if not word:
+        if not word or word in blacklist:
             continue
         if word in word_freq:
             word_freq[word] += 1
