@@ -146,14 +146,25 @@ static void wc(char const *fname)
 
     std::cout << "Top 5 most common words:\n";
     std::vector<std::string> top_words;
-    top_words.resize(6);
+    top_words.resize(5);
 
     for (const std::pair<const std::string, int>& i : word_count) {
-        if (top_words.size() > 0 && word_count[top_words[1]] < i.second) {
-            top_words.insert(top_words.begin(), i.first);
+        if (top_words.size() > 0) {
+            if (word_count[top_words[0]] < i.second) {
+                top_words.insert(top_words.begin(), i.first);
+            } else if (word_count[top_words[1]] < i.second) {
+                top_words.insert(top_words.begin() + 1, i.first);
+            } else if (word_count[top_words[2]] < i.second) {
+                top_words.insert(top_words.begin() + 2, i.first);
+            } else if (word_count[top_words[3]] < i.second) {
+                top_words.insert(top_words.begin() + 3, i.first);
+            } else if (word_count[top_words[4]] < i.second) {
+                top_words.insert(top_words.begin() + 4, i.first);
+            }
         } else if (top_words.size() < 5) {
             top_words.push_back(i.first);
-        } else if (top_words.size() > 5) {
+        } 
+        if (top_words.size() > 5) {
             top_words.pop_back();
         }
     }
