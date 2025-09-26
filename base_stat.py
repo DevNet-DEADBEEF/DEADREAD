@@ -84,6 +84,7 @@ top_five = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:5]
 print(" ".join(word for word, freq in top_five))
 
 if debug:
+    print("\n--- DEBUG INFO ---")
     print(f"Total sentences: {sentence_count}")
     print(f"Total words: {sum(word_freq.values())}")
     print(f"Unique words: {len(word_freq)}")
