@@ -90,17 +90,17 @@ static void wc(char const *fname)
                     }
                 }
                 continue;
-            } else {
-                if (buf[i] == '*') {
-                    // Potential end of book
-                    if (i + END_STRING.size() <= bytes_read) {
-                        std::string potential_end(&buf[i], END_STRING.size());
-                        if (potential_end == END_STRING) {
-                            inBook = false;
-                            // std::cout << "End of book\n";
-                        }
+            }
+            if (buf[i] == '*') {
+                // Potential end of book
+                if (i + END_STRING.size() <= bytes_read) {
+                    std::string potential_end(&buf[i], END_STRING.size());
+                    if (potential_end == END_STRING) {
+                        inBook = false;
+                        // std::cout << "End of book\n";
                     }
                 }
+                break;
             }
 
             bool isPunct = std::find(PUNCTUATION.begin(), PUNCTUATION.end(), buf[i]) != PUNCTUATION.end();

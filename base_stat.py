@@ -41,7 +41,7 @@ if args.stats:
 ...
 """
 
-sentence_end_chars = r"[.!?\"]+"
+sentence_end_chars = r'[.!?"]+'
 word_delimiters = r"\s+"
 
 def clean_word(word):
@@ -112,9 +112,9 @@ print(" ".join(word for word, freq in top_five))
 
 if debug:
     print("\n--- DEBUG INFO ---")
-    print(f"Total sentences: {sentence_count}")
-    print(f"Total words: {sum(word_freq.values())}")
-    print(f"Unique words: {len(word_freq)}")
+    print(f"Total sentences: {sentence_count:,}")
+    print(f"Total words: {sum(word_freq.values()):,}")
+    print(f"Unique words: {len(word_freq):,}")
     print(f"Smallest word: {min(word_freq.keys(), key=len)}")
     print(f"Largest word: {max(word_freq.keys(), key=len)}")
 
