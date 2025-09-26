@@ -54,12 +54,13 @@ with open(file, 'r', encoding='utf-8') as f:
         sentence = sentence.strip()
         if not sentence:
             continue
-        sentence_count += 1
         words = re.split(word_deilmiters , sentence)
         words = [word.lower() for word in words if word]
         if len(words) <= 1:
             continue
-        # print(words)
+        sentence_count += 1
+        if debug:
+            print(words)
         sentence_len_sum += len(words)
         for word in words:
             word = clean_word(word)
