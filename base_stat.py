@@ -67,8 +67,6 @@ for sentence in sentences:
         continue
     sentence_count += 1
     sentence_words.append(words)
-    if debug:
-        print(words)
     sentence_len_sum += len(words)
     for word in words:
         word = clean_word(word)
