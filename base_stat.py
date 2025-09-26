@@ -47,37 +47,52 @@ with open(file, 'r', encoding='utf-8') as f:
             end_line = i
             break
 
-    ebook = " ".join(lines[start_line:end_line]).strip()
+ebook = " ".join(lines[start_line:end_line]).strip()
 
-    sentences = re.split(sentence_end_chars, ebook)
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
-            continue
-        words = re.split(word_deilmiters , sentence)
-        words = [word.lower() for word in words if word]
-        if len(words) <= 1:
-            continue
-        sentence_count += 1
-        if debug:
-            print(words)
-        sentence_len_sum += len(words)
-        for word in words:
-            word = clean_word(word)
-            if not word:
-                continue
-            if word in word_freq:
-                word_freq[word] += 1
-            else:
-                word_freq[word] = 1
-
-    avg_sentence_len = sentence_len_sum / sentence_count if sentence_count > 0 else 0
-    print(title, "\\ ", end="")
-    print(avg_sentence_len, "\\ ", end="")
-    top_five = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:5]
-    print(" ".join(word for word, freq in top_five))
-
+sentences = re.split(sentence_end_chars, ebook)
+sentences = list(
+    filter(
+        lambda s: s.strip() != "",
+        sentences
+    )
+)
+sentence_words = []
+for sentence in sentences:
+    sentence = sentence.strip()
+    if not sentence:
+        continue
+    words = re.split(word_deilmiters , sentence)
+    words = [word.lower() for word in words if word]
+    if len(words) <= 1:
+        continue
+    sentence_count += 1
+    sentence_words.append(words)
     if debug:
-        print(f"Total sentences: {sentence_count}")
-        print(f"Total words: {sum(word_freq.values())}")
-        print(f"Unique words: {len(word_freq)}")
+        print(words)
+    sentence_len_sum += len(words)
+    for word in words:
+        word = clean_word(word)
+        if not word:
+            continue
+        if word in word_freq:
+            word_freq[word] += 1
+        else:
+            word_freq[word] = 1
+
+avg_sentence_len = sentence_len_sum / sentence_count if sentence_count > 0 else 0
+print(title, "\\ ", end="")
+print(avg_sentence_len, "\\ ", end="")
+top_five = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:5]
+print(" ".join(word for word, freq in top_five))
+
+if debug:
+    print(f"Total sentences: {sentence_count}")
+    print(f"Total words: {sum(word_freq.values())}")
+    print(f"Unique words: {len(word_freq)}")
+    print(f"Smallest word: {min(word_freq.keys(), key=len)}")
+    print(f"Largest word: {max(word_freq.keys(), key=len)}")
+
+    smallest_sentence = " ".join(min(sentence_words, key=len))
+    largest_sentence = " ".join(max(sentence_words, key=len))
+    print(f"Smallest sentence: {smallest_sentence.strip()}")
+    print(f"Largest sentence: {largest_sentence.strip()}")
