@@ -42,10 +42,23 @@ if args.stats:
 """
 
 sentence_end_chars = r'[.!?"]+'
-word_delimiters = r"\s+"
+word_delimiters = r"(\s|(--)|(''))+"
+cleaning_pattern1 = r"[^a-zA-Z0-9-']+"
+cleaning_pattern2 = r"(^['-]+(?=[^a-zA-Z]))|((?<=[^a-zAZ])['-]+$)"
 
 def clean_word(word):
-    clean = re.sub(r'[^a-z0-9-\']+', '', word).lower().lstrip("'-").rstrip("'-")
+    clean = re.sub(
+        cleaning_pattern1,
+        '',
+        word,
+        flags=re.IGNORECASE | re.MULTILINE,
+    ).lower()
+    clean = re.sub(
+        cleaning_pattern2,
+        '',
+        clean,
+        flags=re.IGNORECASE | re.MULTILINE,
+    ).lstrip("-").rstrip("-")
     if clean in ["", "-", "'"]:
         return None
     return clean
@@ -91,6 +104,14 @@ for sentence in sentences:
     words = re.split(word_delimiters, sentence)
     words = [word.lower() for word in words if word]
     if len(words) <= 1:
+        word = words[0]
+        word = clean_word(word)
+        if not word or word in blacklist:
+            continue
+        if word in word_freq:
+            word_freq[word] += 1
+        else:
+            word_freq[word] = 1
         continue
     sentence_count += 1
     sentence_words.append(words)
@@ -113,7 +134,8 @@ print(" ".join(word for word, freq in top_five))
 if debug:
     print("\n--- DEBUG INFO ---")
     print(f"Total sentences: {sentence_count:,}")
-    print(f"Total words: {sum(word_freq.values()):,}")
+    print(f"Total words:    {sum(word_freq.values()):,}")
+    print(f"Sum sent words: {sentence_len_sum:,}")
     print(f"Unique words: {len(word_freq):,}")
     print(f"Smallest word: {min(word_freq.keys(), key=len)}")
     print(f"Largest word: {max(word_freq.keys(), key=len)}")
@@ -121,4 +143,8 @@ if debug:
     smallest_sentence = " ".join(min(sentence_words, key=len))
     largest_sentence = " ".join(max(sentence_words, key=len))
     print(f"Smallest sentence: {smallest_sentence.strip()}")
-    print(f"Largest sentence: {largest_sentence.strip()[:5]}...{largest_sentence.strip()[-5:]} ({len(largest_sentence.split())} words)")
+    print(f"Largest sentence: {largest_sentence.strip()[:15]}...{largest_sentence.strip()[-15:]} ({len(largest_sentence.split())} words)")
+
+    with open("py.dump.debugify.help.pls.fix", "w", encoding='utf-8') as f:
+        for word, freq in sorted(word_freq.items(), key=lambda x: x[0]):
+            f.write(f"- {word} ({freq})\n")
