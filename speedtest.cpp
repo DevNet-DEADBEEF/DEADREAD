@@ -32,7 +32,7 @@ static void wc(char const *fname)
 {
     auto t1 = time_now();
 
-    static const auto BUFFER_SIZE = 16*1024;
+    static const auto BUFFER_SIZE = 128*1024;
     int fd = open(fname, O_RDONLY);
     if(fd == -1)
         handle_error("open");
