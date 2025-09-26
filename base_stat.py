@@ -45,7 +45,7 @@ sentence_end_chars = r'[.!?"]+'
 word_delimiters = r"\s+"
 
 def clean_word(word):
-    clean = re.sub(r'^[^a-z0-9-\']+$', '', word).lower().lstrip("'-").rstrip("'-")
+    clean = re.sub(r'[^a-z0-9-\']+', '', word).lower().lstrip("'-").rstrip("'-")
     if clean in ["", "-", "'"]:
         return None
     return clean
@@ -121,4 +121,4 @@ if debug:
     smallest_sentence = " ".join(min(sentence_words, key=len))
     largest_sentence = " ".join(max(sentence_words, key=len))
     print(f"Smallest sentence: {smallest_sentence.strip()}")
-    print(f"Largest sentence: {largest_sentence.strip()}")
+    print(f"Largest sentence: {largest_sentence.strip()[:5]}...{largest_sentence.strip()[-5:]} ({len(largest_sentence.split())} words)")
