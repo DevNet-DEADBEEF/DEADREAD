@@ -118,6 +118,9 @@ static void wc(char const *fname)
                 if (wordbuf.empty()) {
                     continue;
                 }
+                if (wordbuf.back() == '\'' || wordbuf.back() == '-') {
+                    continue;
+                }
                 wordbuf.push_back(buf[i]);
             } else if (isDelimiter && !wordbuf.empty()) {
                 // std::cout << "Word: " << std::string(wordbuf.begin(), wordbuf.end()) << "\n";
@@ -167,6 +170,8 @@ static void wc(char const *fname)
     std::vector<std::string> top_words;
     top_words.resize(5);
 
+    int num_words = 0;
+
     for (const std::pair<const std::string, int>& i : word_count) {
         if (top_words.size() > 0) {
             if (word_count[top_words[0]] < i.second) {
@@ -186,6 +191,7 @@ static void wc(char const *fname)
         if (top_words.size() > 5) {
             top_words.pop_back();
         }
+        num_words += i.second;
     }
 
     for (size_t i = 0; i < top_words.size(); ++i) {
@@ -206,7 +212,7 @@ static void wc(char const *fname)
 
     std::cout << "Total sentences: " << sentenceNum << "\n";
     std::cout << "Average words per sentence: " << (sentenceNum ? (double)sentenceSum / sentenceNum : 0) << "\n";
-    std::cout << "Total words: " << sentenceSum << "\n";
+    std::cout << "Total words: " << num_words << "\n";
     std::cout << "Smallest word: " << smallest_word << " (" << smallest_word.size() << " characters)\n";
     std::cout << "Largest word: " << largest_word << " (" << largest_word.size() << " characters)\n";
     std::cout << "Unique words: " << word_count.size() - 1 << "\n";
