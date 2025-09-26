@@ -13,7 +13,7 @@
 #include <fcntl.h>
 
 const std::string START_STRING = "*** START OF THIS PROJECT GUTENBERG EBOOK ";
-const std::string END_STRING = "*** END ";
+const std::string END_STRING = "*** END OF THIS PROJECT GUTENBERG EBOOK ";
 
 double times2double(std::chrono::time_point<std::chrono::high_resolution_clock> start, std::chrono::time_point<std::chrono::high_resolution_clock> end) {
     return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
@@ -54,6 +54,8 @@ static void wc(char const *fname)
     std::string smallest_word = {};
     std::string largest_word = {};
 
+    int exitWords = 0;
+    std::vector<char> exitbuf = {};
     std::vector<std::string> sentencebuf = {};
     std::vector<char> wordbuf = {};
     std::tr1::unordered_map<std::string, int> word_count;
@@ -113,17 +115,24 @@ static void wc(char const *fname)
                 }
                 continue;
             }
-            if (buf[i] == '*') {
+            if (buf[i] == END_STRING[exitbuf.size()]) {
                 // Potential end of book
-                if (i + END_STRING.size() <= bytes_read) {
-                    std::string potential_end(&buf[i], END_STRING.size());
-                    if (potential_end == END_STRING) {
-                        inBook = false;
-                        exitting = true;
-                        isPunct = true;
-                        // std::cout << "End of book\n";
-                    }
+                exitbuf.push_back(buf[i]);
+                if (buf[i] == ' ') {
+                    exitWords++;
                 }
+                if (exitbuf.size() == END_STRING.size()) {
+                    for (int i = 0; i < exitWords; ++i) {
+                        if (!sentencebuf.empty()) sentencebuf.pop_back();
+                    }
+                    inBook = false;
+                    exitting = true;
+                    isPunct = true;
+                }
+            } else if (!exitbuf.empty()) {
+                // Mismatch after some matches, reset
+                exitWords = 0;
+                exitbuf.clear();
             }
 
             bool isDelimiter = (buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\t'  || buf[i] == '\r' || isPunct);
