@@ -212,12 +212,12 @@ static void wc(char const *fname)
     std::cout << "Unique words: " << word_count.size() - 1 << "\n";
 
     std::vector<std::pair<std::string, int>> sorted_words(word_count.begin(), word_count.end());
-    std::sort(sorted_words.begin(), sorted_words.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
-        return a.second > b.second; // Sort by frequency (descending)
-    });
+    std::sort(sorted_words.begin(), sorted_words.end());//, [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+    //     return a.second > b.second; // Sort by frequency (descending)
+    // });
     for (const auto& w : sorted_words) {
         if (w.first.empty()) continue;
-        std::cout << " - " << w.first << " (" << w.second << " occurrences)\n";
+        std::cout << " - " << w.first << " (" << w.second << ")\n";
     }
 
     std::cout << "Finished reading file\n";
