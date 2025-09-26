@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstring>
 #include <vector>
+#include <chrono>
 #include <tr1/unordered_map>
 
 // for mmap:
@@ -14,6 +15,14 @@
 const std::string START_STRING = "*** START OF THIS PROJECT GUTENBERG EBOOK ";
 const std::string END_STRING = "*** END ";
 
+double times2double(std::chrono::time_point<std::chrono::high_resolution_clock> start, std::chrono::time_point<std::chrono::high_resolution_clock> end) {
+    return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
+}
+
+std::chrono::time_point<std::chrono::high_resolution_clock> time_now() {
+    return std::chrono::high_resolution_clock::now();
+}
+
 void handle_error(const char* msg) {
     perror(msg); 
     exit(255);
@@ -21,13 +30,15 @@ void handle_error(const char* msg) {
 
 static void wc(char const *fname)
 {
+    auto t1 = time_now();
+
     static const auto BUFFER_SIZE = 16*1024;
     int fd = open(fname, O_RDONLY);
     if(fd == -1)
         handle_error("open");
 
     /* Advise the kernel of our access pattern.  */
-    posix_fadvise(fd, 0, 0, 1);  // FDADVICE_SEQUENTIAL
+    posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE);  // FDADVICE_SEQUENTIAL
 
     char buf[BUFFER_SIZE + 1];
 
@@ -47,8 +58,13 @@ static void wc(char const *fname)
     std::vector<char> wordbuf = {};
     std::tr1::unordered_map<std::string, int> word_count;
 
+    auto t2 = time_now();
+    std::cout << "File opened in " << times2double(t1, t2) << "ms" << std::endl;
+
     while(size_t bytes_read = read(fd, buf, BUFFER_SIZE))
     {
+        auto tc1 = time_now();
+
         if(bytes_read == (size_t)-1)
             handle_error("read failed");
         if (!bytes_read)
@@ -164,9 +180,14 @@ static void wc(char const *fname)
                 sentencebuf.clear();
             }
         }
+
+        auto tc2 = time_now();
+        std::cout << "Chunk processed in " << times2double(tc1, tc2) << "ms" << std::endl;
     }
 
-    std::cout << "Top 5 most common words:\n";
+    auto t3 = time_now();
+    std::cout << "File processed in " << times2double(t2, t3) << "ms" << std::endl;
+
     std::vector<std::string> top_words;
     top_words.resize(5);
 
@@ -194,8 +215,13 @@ static void wc(char const *fname)
         num_words += i.second;
     }
 
+    auto t4 = time_now();
+    std::cout << "Top words computed in " << times2double(t3, t4) << "ms" << std::endl;
+
+    std::cout << "Top 5 most common words:\n";
+
     for (size_t i = 0; i < top_words.size(); ++i) {
-        std::cout << top_words[i] << ": " << word_count[top_words[i]] << "\n";
+        std::cout << " - " << top_words[i] << " (" << word_count[top_words[i]] << ")\n";
     }
 
     std::cout << "Shortest sentence (" << shortest_sentence.size() << " words): ";
@@ -221,15 +247,18 @@ static void wc(char const *fname)
     std::sort(sorted_words.begin(), sorted_words.end());//, [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
     //     return a.second > b.second; // Sort by frequency (descending)
     // });
-    for (const auto& w : sorted_words) {
-        if (w.first.empty()) continue;
-        std::cout << " - " << w.first << " (" << w.second << ")\n";
-    }
+    // for (const auto& w : sorted_words) {
+    //     if (w.first.empty()) continue;
+    //     std::cout << " - " << w.first << " (" << w.second << ")\n";
+    // }
 
     std::cout << "Finished reading file\n";
 
     if(close(fd) == -1)
         handle_error("close failed");
+
+    auto t5 = time_now();
+    std::cout << "Operations completed in " << times2double(t1, t5) << "ms" << std::endl;
 
     //std::cout << buf << "\n";
 }
