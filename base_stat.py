@@ -16,10 +16,10 @@ debug = "--debug" in sys.argv
 """
 
 sentence_end_chars = r"[.!?\"]+"
-word_deilmiters = r"\s+"
+word_delimiters = r"\s+"
 
 def clean_word(word):
-    clean = re.sub(r'^[^a-z0-9-\']+$', '', word).lower()
+    clean = re.sub(r'^[^a-z0-9-\']+$', '', word).lower().lstrip("'-").rstrip("'-")
     if clean in ["", "-", "'"]:
         return None
     return clean
@@ -61,7 +61,7 @@ for sentence in sentences:
     sentence = sentence.strip()
     if not sentence:
         continue
-    words = re.split(word_deilmiters , sentence)
+    words = re.split(word_delimiters, sentence)
     words = [word.lower() for word in words if word]
     if len(words) <= 1:
         continue
