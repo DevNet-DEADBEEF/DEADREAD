@@ -270,8 +270,7 @@ static void wc(char const *fname) {
     //std::cout << buf << "\n";
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <filename>\n";
         return 1;
