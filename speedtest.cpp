@@ -28,8 +28,7 @@ void handle_error(const char* msg) {
     exit(255);
 }
 
-static void wc(char const *fname)
-{
+static void wc(char const *fname) {
     auto t1 = time_now();
 
     static const auto BUFFER_SIZE = 128*1024;
@@ -63,8 +62,7 @@ static void wc(char const *fname)
     auto t2 = time_now();
     std::cout << "File opened in " << times2double(t1, t2) << "ms" << std::endl;
 
-    while(size_t bytes_read = read(fd, buf, BUFFER_SIZE))
-    {
+    while(size_t bytes_read = read(fd, buf, BUFFER_SIZE)) {
         auto tc1 = time_now();
 
         if(bytes_read == (size_t)-1)
