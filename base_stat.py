@@ -15,7 +15,7 @@ debug = "--debug" in sys.argv
 ...
 """
 
-sentence_end_chars = r"[.!?]+"
+sentence_end_chars = r"[.!?\"]+"
 word_deilmiters = r"\s+"
 
 def clean_word(word):
@@ -57,6 +57,8 @@ with open(file, 'r', encoding='utf-8') as f:
         sentence_count += 1
         words = re.split(word_deilmiters , sentence)
         words = [word.lower() for word in words if word]
+        if len(words) <= 1:
+            continue
         # print(words)
         sentence_len_sum += len(words)
         for word in words:
@@ -74,4 +76,7 @@ with open(file, 'r', encoding='utf-8') as f:
     top_five = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:5]
     print(" ".join(word for word, freq in top_five))
 
-    print(sentence_count)
+    if debug:
+        print(f"Total sentences: {sentence_count}")
+        print(f"Total words: {sum(word_freq.values())}")
+        print(f"Unique words: {len(word_freq)}")
