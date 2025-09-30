@@ -32,11 +32,7 @@ void handle_error(const char* msg) {
     exit(255);
 }
 
-static void parse_csv(char const *bannedFName) {
-    int fin = open(bannedFName, O_RDONLY);
-    if(fin == -1)
-        handle_error("open csv");
-    
+static void parse_csv(int fin) {
     std::string word;
     char buf[BUFFER_SIZE+1];
 
@@ -68,15 +64,8 @@ static void parse_csv(char const *bannedFName) {
     // }
 }
 
-static void wc(char const *fname) {
+static void wc(int fd) {
     auto t1 = time_now();
-
-    int fd = open(fname, O_RDONLY);
-    if(fd == -1)
-        handle_error("open");
-
-    /* Advise the kernel of our access pattern.  */
-    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
 
     char buf[BUFFER_SIZE + 1];
 
@@ -335,9 +324,24 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    int fd = open(argv[1], O_RDONLY);
+    if(fd == -1)
+        handle_error("open");
+
+    /* Advise the kernel of our access pattern.  */
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
+
     if (argc == 3){
-        parse_csv(argv[2]);
+        int fin = open(argv[2], O_RDONLY);
+        if(fin == -1)
+            handle_error("open csv");
+
+            
+        /* Advise the kernel of our access pattern.  */
+        posix_fadvise(fin, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
+
+        parse_csv(fin);
     }
 
-    wc(argv[1]);
+    wc(fd);
 }
