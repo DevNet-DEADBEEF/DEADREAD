@@ -42,7 +42,7 @@ if args.stats:
 """
 
 sentence_end_chars = r'[.!?"]+'
-word_delimiters = r"(\s|(--)|(''))+"
+word_delimiters = r"(\s|(''))+"
 cleaning_pattern1 = r"[^a-zA-Z0-9-']+"
 cleaning_pattern2 = r"(^['-]+(?=[^a-zA-Z]))|((?<=[^a-zAZ])['-]+$)"
 
