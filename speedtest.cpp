@@ -4,10 +4,12 @@
 #include <algorithm>
 #include <iostream>
 #include <cstring>
+#include <string_view>
 #include <vector>
 #include <chrono>
 #include <tr1/unordered_map>
 #include <unordered_set>
+#include <filesystem>
 
 // for mmap:
 #include <sys/stat.h>
@@ -15,6 +17,7 @@
 
 const std::string START_STRING = "*** START OF THIS PROJECT GUTENBERG EBOOK ";
 const std::string END_STRING = "*** END "; // OF THIS PROJECT GUTENBERG EBOOK ";
+const std::string TITLE_STRING = "Title: ";
 
 double times2double(std::chrono::time_point<std::chrono::high_resolution_clock> start, std::chrono::time_point<std::chrono::high_resolution_clock> end) {
     return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
@@ -25,7 +28,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> time_now() {
 }
 
 std::unordered_set<std::string> bannedWords;
-static const auto BUFFER_SIZE = 128*1024;
+static const auto BUFFER_SIZE = 16*1024;
 
 void handle_error(const char* msg) {
     perror(msg); 
@@ -74,6 +77,7 @@ static void wc(int fd) {
 
     bool inBook = false;
     bool inHeader = false;
+    bool gotTitle = false;
     bool exitting = false;
 
     std::vector<std::string> shortest_sentence = {};
@@ -82,8 +86,8 @@ static void wc(int fd) {
     std::string largest_word = {};
 
     int exitWords = 0;
+    std::string title;
     std::vector<char> exitbuf = {};
-    int startWords = 0;
     std::vector<char> startBuf = {};
 
     std::vector<std::string> sentencebuf = {};
@@ -121,22 +125,29 @@ static void wc(int fd) {
 
             if (!inBook) {
                 if (!inHeader) {
+                    if (!gotTitle){
+                        if (buf[i] == TITLE_STRING[startBuf.size()]){
+                            startBuf.push_back(buf[i]);
+                            if (startBuf.size() == TITLE_STRING.size()){
+                                ++i;
+                                while(buf[i] != '\n'){
+                                    title += buf[i];
+                                    ++i;
+                                }
+                                std::cout << "Title: " << title << '\n';
+                                gotTitle = true;
+                            }
+                        }
+                    } else
                     // Potential start of header
                     if (buf[i] == START_STRING[startBuf.size()]) {
                         // Potential end of book
                         startBuf.push_back(buf[i]);
-                        if (buf[i] == ' ') {
-                            startWords++;
-                        }
                         if (startBuf.size() == START_STRING.size()) {
-                            for (int i = 0; i < startWords; ++i) {
-                                if (!sentencebuf.empty()) sentencebuf.pop_back();
-                            }
                             inHeader = true;
                         }
                     } else if (!startBuf.empty()) {
                         // Mismatch after some matches, reset
-                        startWords = 0;
                         startBuf.clear();
                     }
                 } else {
@@ -239,7 +250,6 @@ static void wc(int fd) {
     std::cout << "File processed in " << times2double(t2, t3) << "ms" << std::endl;
 
     std::vector<std::string> top_words;
-    top_words.resize(5);
 
     int num_words = 0;
 
@@ -250,18 +260,16 @@ static void wc(int fd) {
             continue;
         }
 
-        if (top_words.size() > 0) {
-            if (word_count[top_words[0]] < i.second) {
-                top_words.insert(top_words.begin(), i.first);
-            } else if (word_count[top_words[1]] < i.second) {
-                top_words.insert(top_words.begin() + 1, i.first);
-            } else if (word_count[top_words[2]] < i.second) {
-                top_words.insert(top_words.begin() + 2, i.first);
-            } else if (word_count[top_words[3]] < i.second) {
-                top_words.insert(top_words.begin() + 3, i.first);
-            } else if (word_count[top_words[4]] < i.second) {
-                top_words.insert(top_words.begin() + 4, i.first);
-            }
+        if (top_words.size() > 0 && word_count[top_words[0]] < i.second) {
+            top_words.insert(top_words.begin(), i.first);
+        } else if (top_words.size() > 1 && word_count[top_words[1]] < i.second) {
+            top_words.insert(top_words.begin() + 1, i.first);
+        } else if (top_words.size() > 2 && word_count[top_words[2]] < i.second) {
+            top_words.insert(top_words.begin() + 2, i.first);
+        } else if (top_words.size() > 3 && word_count[top_words[3]] < i.second) {
+            top_words.insert(top_words.begin() + 3, i.first);
+        } else if (top_words.size() > 4 && word_count[top_words[4]] < i.second) {
+            top_words.insert(top_words.begin() + 4, i.first);
         } else if (top_words.size() < 5) {
             top_words.push_back(i.first);
         } 
@@ -271,6 +279,15 @@ static void wc(int fd) {
     }
 
     auto t4 = time_now();
+    double avgSenLen = sentenceNum ? (double)sentenceSum / sentenceNum : 0;
+
+    std::cout << title << " \\ ";
+    for (size_t i = 0; i < top_words.size(); ++i){
+        std::cout << top_words[i] << " ";
+    }
+    std::cout << "\\ " << avgSenLen << '\n'; 
+
+
     std::cout << "Top words computed in " << times2double(t3, t4) << "ms" << std::endl;
 
     std::cout << "Top 5 most common words:\n";
@@ -292,7 +309,7 @@ static void wc(int fd) {
     std::cout << "\n";
 
     std::cout << "Total sentences: " << sentenceNum << "\n";
-    std::cout << "Average words per sentence: " << (sentenceNum ? (double)sentenceSum / sentenceNum : 0) << "\n";
+    std::cout << "Average words per sentence: " << avgSenLen << "\n";
     std::cout << "Total words: " << num_words << "\n";
     std::cout << "Smallest word: " << smallest_word << " (" << smallest_word.size() << " characters)\n";
     std::cout << "Largest word: " << largest_word << " (" << largest_word.size() << " characters)\n";
@@ -320,18 +337,17 @@ static void wc(int fd) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2 || argc > 3) {
-        std::cerr << "Usage: " << argv[0] << " <filename>\n";
+        std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
         return 1;
     }
 
-    int fd = open(argv[1], O_RDONLY);
-    if(fd == -1)
-        handle_error("open");
-
-    /* Advise the kernel of our access pattern.  */
-    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
-
     if (argc == 3){
+        std::string_view arg(argv[2]);
+        if (arg.size() > 4 && arg.substr(arg.size()-4) != ".csv"){
+            std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
+            return 1;
+        }
+
         int fin = open(argv[2], O_RDONLY);
         if(fin == -1)
             handle_error("open csv");
@@ -343,5 +359,40 @@ int main(int argc, char* argv[]) {
         parse_csv(fin);
     }
 
-    wc(fd);
+    if (std::filesystem::is_directory(argv[1])){
+        for (auto const& bookFile : std::filesystem::directory_iterator(argv[1])){
+            std::string bfStr = bookFile.path().string();
+            //std::cout << bfStr << '\n'; //DEBUG
+            if (bfStr.size() > 4 && bfStr.substr(bfStr.size()-4) != ".txt"){
+                std::cout << bfStr << " is not a .txt file!" << "\n";
+                continue;
+            }
+
+            int fd = open(bookFile.path().c_str(), O_RDONLY);
+            
+            if(fd == -1)
+                handle_error("open");
+
+            /* Advise the kernel of our access pattern.  */
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+
+            wc(fd);
+            std::cout << '\n' << "--------------------------------------------------" << "\n\n"; //For readability.
+        }
+    } else {
+        std::string_view arg(argv[1]);
+        if (arg.size() > 4 && arg.substr(arg.size()-4) != ".txt"){
+            std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
+            return 1;
+        }
+
+        int fd = open(argv[1], O_RDONLY);
+        if(fd == -1)
+            handle_error("open");
+
+        /* Advise the kernel of our access pattern.  */
+        posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
+
+        wc(fd);
+    }
 }
