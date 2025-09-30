@@ -68,6 +68,7 @@ def clean_word(word):
         return None
     return clean
 
+books = dict()
 
 def get_words(file):
     with open(file, 'r', encoding='utf-8') as f:
@@ -78,7 +79,11 @@ def get_words(file):
 
         for i, line in enumerate(lines):
             line = line.strip()
-            if line.startswith("*** START OF THIS PROJECT GUTENBERG EBOOK"):
+            if line.startswith("Title: "):
+                title = line.split("Title: ")[1].strip()
+            elif line.startswith("Author: "):
+                author = line.split("Author: ")[1].strip()
+            elif line.startswith("*** START OF THIS PROJECT GUTENBERG EBOOK"):
                 start_line = i + 1
                 continue
             elif line.startswith("*** END OF THIS PROJECT GUTENBERG EBOOK"):
@@ -89,7 +94,7 @@ def get_words(file):
 
     ebook = " ".join(lines[start_line:end_line]).strip()
 
-    sentences = re.split(sentence_end_chars, ebook)
+    sentences = re.split(sentence_end_chars, ebook, title, author)
     sentences = list(
         map(
             lambda sentence: (book_id, sentence),
@@ -123,36 +128,48 @@ if r_cache:
 else:
     ebooks = []
     list(map(
-        lambda file: ebooks.extend(get_words(os.path.join(args.parse[1], file))),
+        lambda file: ebooks.extend(
+            get_words(
+                os.path.join(
+                    str(args.parse[1]),
+                    str(file)
+                )
+            )
+        ),
         filter(
             lambda file: file.endswith(".txt"),
             os.listdir(args.parse[1]),
         )
     ))
 
-    book_ids = map(lambda x: x[0], ebooks)
-    book_texts = map(lambda x: x[1], ebooks)
+    book_ids, book_texts, titles, authors = zip(*ebooks)
     data = pd.DataFrame(
         {
             "book_id": book_ids,
-            "ebook": book_texts
+            "sent": book_texts,
+            "title": titles,
+            "author": authors,
         }
     )
+    cache_df = data.copy()
+    cache_df = cache_df.drop(columns=["sent"])
 
     embeds = []
     n_chunks = data.shape[0] // 100
-    for i, data_chunk in enumerate(grouper(data["ebook"].tolist(), 100)):
+    for i, data_chunk in enumerate(grouper(data["sent"].tolist(), 100)):
         try:
             print(f"Processing chunk {i + 1}/{n_chunks}", end="    \r")
             embeds.extend(model.encode(data_chunk))
 
             # Save our progress
-            cache["df"] = data
+            cache["books"] = cache_df
             cache["vec"] = pd.DataFrame(embeds)
         except KeyboardInterrupt:
             print("Saving and exiting...")
             cache.close()
             exit(0)
+
+    data = cache_df
 
 print(f"Embeddings loaded in {perf_counter() - ebook_timer:.3f} seconds")
 query_timer = perf_counter()
@@ -167,14 +184,14 @@ print(f"Parsed {len(data)} files from {args.parse[1]}.")
 query = "Project Gutenberg"
 
 sim = model.similarity(model.encode_query(query), embeds)
-match = data["ebook"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
+match = data["title"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
 
 print(f"Query {query} matched to {match}")
 
-query = "Encyclopedia"
+query = "donec"
 
 sim = model.similarity(model.encode_query(query), embeds)
-match = data["ebook"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
+match = data["title"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
 
 print(f"Query {query} matched to {match}")
 
