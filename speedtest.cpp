@@ -25,7 +25,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> time_now() {
 }
 
 std::unordered_set<std::string> bannedWords;
-static const auto BUFFER_SIZE = 128*1024;
+static const auto BUFFER_SIZE = 16*1024;
 
 void handle_error(const char* msg) {
     perror(msg); 
@@ -239,7 +239,6 @@ static void wc(int fd) {
     std::cout << "File processed in " << times2double(t2, t3) << "ms" << std::endl;
 
     std::vector<std::string> top_words;
-    top_words.resize(5);
 
     int num_words = 0;
 
@@ -250,18 +249,16 @@ static void wc(int fd) {
             continue;
         }
 
-        if (top_words.size() > 0) {
-            if (word_count[top_words[0]] < i.second) {
-                top_words.insert(top_words.begin(), i.first);
-            } else if (word_count[top_words[1]] < i.second) {
-                top_words.insert(top_words.begin() + 1, i.first);
-            } else if (word_count[top_words[2]] < i.second) {
-                top_words.insert(top_words.begin() + 2, i.first);
-            } else if (word_count[top_words[3]] < i.second) {
-                top_words.insert(top_words.begin() + 3, i.first);
-            } else if (word_count[top_words[4]] < i.second) {
-                top_words.insert(top_words.begin() + 4, i.first);
-            }
+        if (top_words.size() > 0 && word_count[top_words[0]] < i.second) {
+            top_words.insert(top_words.begin(), i.first);
+        } else if (top_words.size() > 1 && word_count[top_words[1]] < i.second) {
+            top_words.insert(top_words.begin() + 1, i.first);
+        } else if (top_words.size() > 2 && word_count[top_words[2]] < i.second) {
+            top_words.insert(top_words.begin() + 2, i.first);
+        } else if (top_words.size() > 3 && word_count[top_words[3]] < i.second) {
+            top_words.insert(top_words.begin() + 3, i.first);
+        } else if (top_words.size() > 4 && word_count[top_words[4]] < i.second) {
+            top_words.insert(top_words.begin() + 4, i.first);
         } else if (top_words.size() < 5) {
             top_words.push_back(i.first);
         } 
