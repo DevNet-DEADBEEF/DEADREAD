@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cstring>
+#include <string_view>
 #include <vector>
 #include <chrono>
 #include <tr1/unordered_map>
@@ -336,18 +337,17 @@ static void wc(int fd) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2 || argc > 3) {
-        std::cerr << "Usage: " << argv[0] << " <filename>\n";
+        std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
         return 1;
     }
 
-    int fd = open(argv[1], O_RDONLY);
-    if(fd == -1)
-        handle_error("open");
-
-    /* Advise the kernel of our access pattern.  */
-    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
-
     if (argc == 3){
+        std::string_view arg(argv[2]);
+        if (arg.size() > 4 && arg.substr(arg.size()-4) != ".csv"){
+            std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
+            return 1;
+        }
+
         int fin = open(argv[2], O_RDONLY);
         if(fin == -1)
             handle_error("open csv");
@@ -359,5 +359,40 @@ int main(int argc, char* argv[]) {
         parse_csv(fin);
     }
 
-    wc(fd);
+    if (std::filesystem::is_directory(argv[1])){
+        for (auto const& bookFile : std::filesystem::directory_iterator(argv[1])){
+            std::string bfStr = bookFile.path().string();
+            //std::cout << bfStr << '\n'; //DEBUG
+            if (bfStr.size() > 4 && bfStr.substr(bfStr.size()-4) != ".txt"){
+                std::cout << bfStr << " is not a .txt file!" << "\n";
+                continue;
+            }
+
+            int fd = open(bookFile.path().c_str(), O_RDONLY);
+            
+            if(fd == -1)
+                handle_error("open");
+
+            /* Advise the kernel of our access pattern.  */
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+
+            wc(fd);
+            std::cout << '\n' << "--------------------------------------------------" << "\n\n"; //For readability.
+        }
+    } else {
+        std::string_view arg(argv[1]);
+        if (arg.size() > 4 && arg.substr(arg.size()-4) != ".txt"){
+            std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
+            return 1;
+        }
+
+        int fd = open(argv[1], O_RDONLY);
+        if(fd == -1)
+            handle_error("open");
+
+        /* Advise the kernel of our access pattern.  */
+        posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
+
+        wc(fd);
+    }
 }
