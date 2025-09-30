@@ -1,6 +1,5 @@
-import sys
-import re
 import argparse
+import re
 
 parser = argparse.ArgumentParser(
     description="Analyze a Project Gutenberg ebook for average sentence length and top 5 words."
@@ -97,6 +96,7 @@ sentences = list(
     )
 )
 sentence_words = []
+largest_word = ""
 for sentence in sentences:
     sentence = sentence.strip()
     if not sentence:
@@ -105,6 +105,8 @@ for sentence in sentences:
     words = [word.lower() for word in words if word]
     if len(words) <= 1:
         word = words[0]
+        if len(word) > len(largest_word):
+            largest_word = word
         word = clean_word(word)
         if not word or word in blacklist:
             continue
@@ -117,6 +119,8 @@ for sentence in sentences:
     sentence_words.append(words)
     sentence_len_sum += len(words)
     for word in words:
+        if len(word) > len(largest_word):
+            largest_word = word
         word = clean_word(word)
         if not word or word in blacklist:
             continue
