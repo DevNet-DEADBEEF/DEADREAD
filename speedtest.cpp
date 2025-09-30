@@ -33,28 +33,12 @@ void handle_error(const char* msg) {
 }
 
 static void parse_csv(char const *bannedFName) {
-    // std::fstream fin;
-    // fin.open(bannedFName);
-    // if (!fin.is_open()){
-    //     handle_error("open csv");
-    // }
-
     int fin = open(bannedFName, O_RDONLY);
     if(fin == -1)
         handle_error("open csv");
     
     std::string word;
-
     char buf[BUFFER_SIZE+1];
-    // while (fin.get(c)){
-    //     if (c == ',' || c == '\n'){
-    //         bannedWords.insert(word);
-    //         word.clear();
-    //     }
-    //     else{
-    //         word.push_back(c);
-    //     }
-    // }
 
     while(size_t bytes_read = read(fin, buf, BUFFER_SIZE)){
 
@@ -82,9 +66,6 @@ static void parse_csv(char const *bannedFName) {
     //     std::cout << w << "\n";
 
     // }
-
-
-    //fin.close();
 }
 
 static void wc(char const *fname) {
