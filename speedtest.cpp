@@ -8,7 +8,6 @@
 #include <chrono>
 #include <tr1/unordered_map>
 #include <unordered_set>
-#include <fstream>
 
 // for mmap:
 #include <sys/stat.h>
@@ -26,46 +25,52 @@ std::chrono::time_point<std::chrono::high_resolution_clock> time_now() {
 }
 
 std::unordered_set<std::string> bannedWords;
+static const auto BUFFER_SIZE = 128*1024;
 
 void handle_error(const char* msg) {
     perror(msg); 
     exit(255);
 }
 
-
 static void parse_csv(char const *bannedFName) {
-    std::fstream fin;
-    fin.open(bannedFName);
-    if (!fin.is_open()){
+    int fin = open(bannedFName, O_RDONLY);
+    if(fin == -1)
         handle_error("open csv");
-    }
     
     std::string word;
+    char buf[BUFFER_SIZE+1];
 
-    char c;
-    while (fin.get(c)){
-        if (c == ',' || c == '\n'){
-            bannedWords.insert(word);
-            word.clear();
-        }
-        else{
-            word.push_back(c);
+    while(size_t bytes_read = read(fin, buf, BUFFER_SIZE)){
+
+        if(bytes_read == (size_t)-1)
+            handle_error("read failed");
+        if (!bytes_read)
+            break;
+        
+        for (char c: buf){
+            if (c == ',' || c == '\n'){
+                bannedWords.insert(word);
+                word.clear();
+            }
+            else {
+                word.push_back(c);
+            }
         }
     }
+
+    if(close(fin) == -1)
+        handle_error("csv close failed");
+
     //DEBUG:
     // for (std::string w : bannedWords){
     //     std::cout << w << "\n";
 
     // }
-
-
-    fin.close();
 }
 
 static void wc(char const *fname) {
     auto t1 = time_now();
 
-    static const auto BUFFER_SIZE = 128*1024;
     int fd = open(fname, O_RDONLY);
     if(fd == -1)
         handle_error("open");
