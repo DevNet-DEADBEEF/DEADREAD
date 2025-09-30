@@ -1,4 +1,3 @@
-gensim
 pandas
 sentence-transformers
 hf_xet

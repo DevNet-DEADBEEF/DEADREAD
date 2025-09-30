@@ -9,6 +9,7 @@ import itertools
 from sentence_transformers import SentenceTransformer
 import pandas as pd
 import argparse
+import torch
 
 print(f"Imports finished in {perf_counter() - imp_start:.3f} seconds")
 
@@ -26,6 +27,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "--cache", action="store_true", help="Enable caching."
+)
+parser.add_argument(
+    "--saveprog", action="store_true", help="Save progress during generation (slower)."
 )
 
 args = parser.parse_args()
@@ -76,13 +80,15 @@ def get_words(file):
 
         start_line = 0
         end_line = -1
+        title = "Unknown Title"
+        author = "Unknown Author"
 
         for i, line in enumerate(lines):
             line = line.strip()
-            if line.startswith("Title: "):
-                title = line.split("Title: ")[1].strip()
-            elif line.startswith("Author: "):
-                author = line.split("Author: ")[1].strip()
+            if line.startswith("Title:"):
+                title = line.split("Title:")[1].strip()
+            elif line.startswith("Author:"):
+                author = line.split("Author:")[1].strip()
             elif line.startswith("*** START OF THIS PROJECT GUTENBERG EBOOK"):
                 start_line = i + 1
                 continue
@@ -94,10 +100,10 @@ def get_words(file):
 
     ebook = " ".join(lines[start_line:end_line]).strip()
 
-    sentences = re.split(sentence_end_chars, ebook, title, author)
+    sentences = re.split(sentence_end_chars, ebook)
     sentences = list(
         map(
-            lambda sentence: (book_id, sentence),
+            lambda sentence: (book_id, sentence, title, author),
             filter(
                 lambda s: s.strip() != "",
                 sentences
@@ -108,22 +114,24 @@ def get_words(file):
 
     return sentences
 
-
-def grouper(iterator: Iterator, n: int) -> Iterator[list]:
-    while chunk := list(itertools.islice(iterator, n)):
-        yield chunk
+def sem_search(query: str, embeds: list) -> tuple[int, float]:
+    query_embed = model.encode_query(query)
+    sims = model.similarity(query_embed, embeds)[0]
+    scores, simi = torch.topk(sims, k=1)
+    return simi[0].item(), scores[0].item()
 
 print(f"Basics loaded in {perf_counter() - basics_start:.3f} seconds")
 ebook_timer = perf_counter()
 
+print(f"Loading cache {os.path.basename(args.parse[1]) + ".h5"}...")
 cache = pd.HDFStore(os.path.basename(args.parse[1]) + ".h5")
 
 data = pd.DataFrame(columns=["book_id", "ebook"])
 embeds = []
-model = SentenceTransformer("keeeeenw/MicroLlama-text-embedding")
+model = SentenceTransformer("tomaarsen/static-retrieval-mrl-en-v1", truncate_dim=256)
 if r_cache:
     print(f"Loading cached embeddings")
-    data = cache["df"]
+    data = cache["books"]
     embeds = cache["vec"].values.tolist()
 else:
     ebooks = []
@@ -155,44 +163,47 @@ else:
     cache_df = cache_df.drop(columns=["sent"])
 
     embeds = []
+    cache["books"] = cache_df
     n_chunks = data.shape[0] // 100
-    for i, data_chunk in enumerate(grouper(data["sent"].tolist(), 100)):
+    for i, data_chunk in enumerate(itertools.batched(data["sent"], 100)):
         try:
             print(f"Processing chunk {i + 1}/{n_chunks}", end="    \r")
             embeds.extend(model.encode(data_chunk))
 
             # Save our progress
-            cache["books"] = cache_df
-            cache["vec"] = pd.DataFrame(embeds)
+            if args.saveprog and i % 50 == 0:
+                cache["vec"] = pd.DataFrame(embeds)
         except KeyboardInterrupt:
             print("Saving and exiting...")
+            cache["books"] = cache_df
             cache.close()
             exit(0)
 
     data = cache_df
+    print(f"Embeddings generated in {perf_counter() - ebook_timer:.3f} seconds")
 
 print(f"Embeddings loaded in {perf_counter() - ebook_timer:.3f} seconds")
 query_timer = perf_counter()
 
 print(data)
-cache["df"] = data
+cache["books"] = data
 cache["vec"] = pd.DataFrame(embeds)
 cache.close()
 
 print(f"Parsed {len(data)} files from {args.parse[1]}.")
 
-query = "Project Gutenberg"
+query = "Project Gutenberg Encyclopedia"
 
-sim = model.similarity(model.encode_query(query), embeds)
-match = data["title"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
+simi, score = sem_search(query, embeds)
+match = data["title"].iat[simi]
 
-print(f"Query {query} matched to {match}")
+print(f"Query {query} matched to {match} ({score} at {simi})")
 
-query = "donec"
+query = "Cras eu ultrices quam"
 
-sim = model.similarity(model.encode_query(query), embeds)
-match = data["title"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
+simi, score = sem_search(query, embeds)
+match = data["title"].iat[simi]
 
-print(f"Query {query} matched to {match}")
+print(f"Query {query} matched to {match} ({score} at {simi})")
 
 print(f"Queries finished in {perf_counter() - query_timer:.3f} seconds")
