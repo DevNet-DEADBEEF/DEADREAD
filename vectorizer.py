@@ -1,9 +1,18 @@
+from time import perf_counter
+from typing import Iterator
+
+imp_start = perf_counter()
 import os
 import re
 
+import itertools
 from sentence_transformers import SentenceTransformer
 import pandas as pd
 import argparse
+
+print(f"Imports finished in {perf_counter() - imp_start:.3f} seconds")
+
+basics_start = perf_counter()
 
 parser = argparse.ArgumentParser(
     description="Analyze a Project Gutenberg ebook for average sentence length and top 5 words."
@@ -94,6 +103,14 @@ def get_words(file):
 
     return sentences
 
+
+def grouper(iterator: Iterator, n: int) -> Iterator[list]:
+    while chunk := list(itertools.islice(iterator, n)):
+        yield chunk
+
+print(f"Basics loaded in {perf_counter() - basics_start:.3f} seconds")
+ebook_timer = perf_counter()
+
 cache = pd.HDFStore(os.path.basename(args.parse[1]) + ".h5")
 
 data = pd.DataFrame(columns=["book_id", "ebook"])
@@ -122,9 +139,23 @@ else:
         }
     )
 
-    # remove all but the first 5 lines
-    data = data[:5]
-    embeds = model.encode(data["ebook"])
+    embeds = []
+    n_chunks = data.shape[0] // 100
+    for i, data_chunk in enumerate(grouper(data["ebook"].tolist(), 100)):
+        try:
+            print(f"Processing chunk {i + 1}/{n_chunks}", end="    \r")
+            embeds.extend(model.encode(data_chunk))
+
+            # Save our progress
+            cache["df"] = data
+            cache["vec"] = pd.DataFrame(embeds)
+        except KeyboardInterrupt:
+            print("Saving and exiting...")
+            cache.close()
+            exit(0)
+
+print(f"Embeddings loaded in {perf_counter() - ebook_timer:.3f} seconds")
+query_timer = perf_counter()
 
 print(data)
 cache["df"] = data
@@ -139,3 +170,12 @@ sim = model.similarity(model.encode_query(query), embeds)
 match = data["ebook"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
 
 print(f"Query {query} matched to {match}")
+
+query = "Encyclopedia"
+
+sim = model.similarity(model.encode_query(query), embeds)
+match = data["ebook"].iat[(sim == sim.max().item()).nonzero()[0][0].item()]
+
+print(f"Query {query} matched to {match}")
+
+print(f"Queries finished in {perf_counter() - query_timer:.3f} seconds")
