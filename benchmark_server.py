@@ -5,6 +5,7 @@ import time
 import subprocess
 import sys
 import threading
+import random
 
 
 mark_cache = None
@@ -24,16 +25,21 @@ def mark():
     times = []
 
     root_dir = sys.argv[1]
-    # for file in os.listdir(root_dir):
-        # if file.endswith('.txt'):
-    for i in range(50):  # Run each file x times
-        # file_path = os.path.join(root_dir, file)
-        file_path = root_dir
-        start_time = time.perf_counter_ns()
-        subprocess.Popen(f"./speedtest {file_path} > cpp.dump.debugify.help.pls.fix", shell=True, stdout=None, stderr=None).wait()
-        end_time = time.perf_counter_ns()
-        elapsed_time = (end_time - start_time) / 1_000_000  # Convert to milliseconds
-        times.append(elapsed_time)
+    files = os.listdir(root_dir)
+    random.shuffle(files)
+    # files = files[:(len(files) // 5)]  # Use only half of the files for benchmarking
+    for file in files:
+        if file.endswith('.txt'):
+            print(f"Benchmarking {file} ({files.index(file) + 1}/{len(files)})...")
+            file_path = os.path.join(root_dir, file)
+            for i in range(15):  # Run each file x times
+                print(f"Run {i+1}/15: ???.???ms", end="          \r")
+                start_time = time.perf_counter_ns()
+                subprocess.Popen(f"./speedtest {file_path} > cpp.dump.debugify.help.pls.fix", shell=True, stdout=None, stderr=None).wait()
+                end_time = time.perf_counter_ns()
+                elapsed_time = (end_time - start_time) / 1_000_000  # Convert to milliseconds
+                times.append(elapsed_time)
+                print(f"Run {i+1}/15: {elapsed_time:.3f}ms", end="          \r")
 
     avg = sum(times) / len(times) if times else 0
     min_t = min(times) if times else 0
