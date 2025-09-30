@@ -149,12 +149,6 @@ static void wc(char const *fname)
                 std::string word(wordbuf.begin(), wordbuf.end());
                 wordbuf.clear();
 
-                if (word_count.find(word) == word_count.end()) {
-                    word_count[word] = 1;
-                } else {
-                    word_count[word]++;
-                }
-
                 sentencebuf.push_back(word);
                 if (isPunct) {
                     if (sentencebuf.size() <= 1) {
@@ -173,6 +167,15 @@ static void wc(char const *fname)
                     ++sentenceNum;
                     sentenceSum += sentencebuf.size();
                     sentencebuf.clear();
+
+                    if (std::isupper(word[0])){
+                        word[0] = std::tolower(word[0]);
+                    }
+                    if (word_count.find(word) == word_count.end()) {
+                        word_count[word] = 1;
+                    } else {
+                        word_count[word]++;
+                    }
                 }
             } 
         }
