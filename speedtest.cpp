@@ -8,6 +8,7 @@
 #include <chrono>
 #include <tr1/unordered_map>
 #include <unordered_set>
+#include <filesystem>
 
 // for mmap:
 #include <sys/stat.h>
@@ -15,6 +16,7 @@
 
 const std::string START_STRING = "*** START OF THIS PROJECT GUTENBERG EBOOK ";
 const std::string END_STRING = "*** END "; // OF THIS PROJECT GUTENBERG EBOOK ";
+const std::string TITLE_STRING = "Title: ";
 
 double times2double(std::chrono::time_point<std::chrono::high_resolution_clock> start, std::chrono::time_point<std::chrono::high_resolution_clock> end) {
     return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
@@ -74,6 +76,7 @@ static void wc(int fd) {
 
     bool inBook = false;
     bool inHeader = false;
+    bool gotTitle = false;
     bool exitting = false;
 
     std::vector<std::string> shortest_sentence = {};
@@ -82,8 +85,8 @@ static void wc(int fd) {
     std::string largest_word = {};
 
     int exitWords = 0;
+    std::string title;
     std::vector<char> exitbuf = {};
-    int startWords = 0;
     std::vector<char> startBuf = {};
 
     std::vector<std::string> sentencebuf = {};
@@ -121,22 +124,29 @@ static void wc(int fd) {
 
             if (!inBook) {
                 if (!inHeader) {
+                    if (!gotTitle){
+                        if (buf[i] == TITLE_STRING[startBuf.size()]){
+                            startBuf.push_back(buf[i]);
+                            if (startBuf.size() == TITLE_STRING.size()){
+                                ++i;
+                                while(buf[i] != '\n'){
+                                    title += buf[i];
+                                    ++i;
+                                }
+                                std::cout << "Title: " << title << '\n';
+                                gotTitle = true;
+                            }
+                        }
+                    } else
                     // Potential start of header
                     if (buf[i] == START_STRING[startBuf.size()]) {
                         // Potential end of book
                         startBuf.push_back(buf[i]);
-                        if (buf[i] == ' ') {
-                            startWords++;
-                        }
                         if (startBuf.size() == START_STRING.size()) {
-                            for (int i = 0; i < startWords; ++i) {
-                                if (!sentencebuf.empty()) sentencebuf.pop_back();
-                            }
                             inHeader = true;
                         }
                     } else if (!startBuf.empty()) {
                         // Mismatch after some matches, reset
-                        startWords = 0;
                         startBuf.clear();
                     }
                 } else {
@@ -271,6 +281,15 @@ static void wc(int fd) {
     }
 
     auto t4 = time_now();
+    double avgSenLen = sentenceNum ? (double)sentenceSum / sentenceNum : 0;
+
+    std::cout << title << " \\ ";
+    for (size_t i = 0; i < top_words.size(); ++i){
+        std::cout << top_words[i] << " ";
+    }
+    std::cout << "\\ " << avgSenLen << '\n'; 
+
+
     std::cout << "Top words computed in " << times2double(t3, t4) << "ms" << std::endl;
 
     std::cout << "Top 5 most common words:\n";
@@ -292,7 +311,7 @@ static void wc(int fd) {
     std::cout << "\n";
 
     std::cout << "Total sentences: " << sentenceNum << "\n";
-    std::cout << "Average words per sentence: " << (sentenceNum ? (double)sentenceSum / sentenceNum : 0) << "\n";
+    std::cout << "Average words per sentence: " << avgSenLen << "\n";
     std::cout << "Total words: " << num_words << "\n";
     std::cout << "Smallest word: " << smallest_word << " (" << smallest_word.size() << " characters)\n";
     std::cout << "Largest word: " << largest_word << " (" << largest_word.size() << " characters)\n";
