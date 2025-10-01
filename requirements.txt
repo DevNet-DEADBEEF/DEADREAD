@@ -1,1 +1,5 @@
 sentence-transformers
+hf_xet
+protobuf
+sentencepiece
+tables
