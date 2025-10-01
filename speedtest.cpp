@@ -1,21 +1,15 @@
-#include <stdint.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <algorithm>
 #include <iostream>
 #include <cstring>
-#include <string_view>
 #include <vector>
 #include <chrono>
-#include <unordered_map>
 #include <unordered_set>
+#include <unordered_map>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <string.h> 
-
-#include <sys/stat.h>
-#include <fcntl.h>
 
 // Vectors for identifying book start/end and title:
 const std::vector<char> START_STRING = {'*', '*', '*', ' ', 'S', 'T', 'A', 'R', 'T', ' ', 'O', 'F', ' ', 'T', 'H', 'I', 'S', ' ', 'P', 'R', 'O', 'J', 'E', 'C', 'T', ' ', 'G', 'U', 'T', 'E', 'N', 'B', 'E', 'R', 'G', ' ', 'E', 'B', 'O', 'O', 'K', ' '};
@@ -430,9 +424,9 @@ static ParseResult parseFile(int fd) {
         for (const std::pair<const std::string, int>& i : word_count) {
             num_words += i.second;
 
-                if(bannedWords.find(i.first) != bannedWords.end()){
-                continue;
-            }
+            // if(bannedWords.find(i.first) != bannedWords.end()){
+            //     continue;
+            // }
 
             if (top_words.size() > 0 && word_count[top_words[0]] < i.second) {
                 top_words.insert(top_words.begin(), i.first);
@@ -610,9 +604,9 @@ int main(int argc, char* argv[]) {
     }
     
     // Convert all results to JSON and write to file
-    std::ofstream outFile("cache.json");
+    std::ofstream outFile("bookdata.json");
     if (!outFile.is_open()) {
-        std::cerr << "Error: Could not open out.json for writing" << std::endl;
+        std::cerr << "Error: Could not open bookdata.json for writing" << std::endl;
         return 1;
     }
     
@@ -633,6 +627,6 @@ int main(int argc, char* argv[]) {
     outFile.close();
 
     if (!SILENT) {
-        std::cout << "Results written to out.json" << std::endl;
+        std::cout << "Results written to bookdata.json" << std::endl;
     }
 }
