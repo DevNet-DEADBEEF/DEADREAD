@@ -23,32 +23,51 @@ setup()
 
 def mark():
     times = []
+    filetimes = []
+    fileavgs = []
 
     root_dir = sys.argv[1]
     files = os.listdir(root_dir)
     random.shuffle(files)
     # files = files[:(len(files) // 5)]  # Use only half of the files for benchmarking
-    for file in files:
-        if file.endswith('.txt'):
-            print(f"Benchmarking {file} ({files.index(file) + 1}/{len(files)})...")
-            file_path = os.path.join(root_dir, file)
-            for i in range(15):  # Run each file x times
-                print(f"Run {i+1}/15: ???.???ms", end="          \r")
+    for i in range(len(files)):
+        if files[i].endswith('.txt'):
+            print(f"Benchmarking {files[i]} ({i + 1}/{len(files)})...")
+            file_path = os.path.join(root_dir, files[i])
+            filetimes.append([])
+            for j in range(15):  # Run each file x times
+                print(f"Run {j+1}/15: ???.???ms", end="          \r")
                 start_time = time.perf_counter_ns()
                 subprocess.Popen(f"./speedtest {file_path} > cpp.dump.debugify.help.pls.fix", shell=True, stdout=None, stderr=None).wait()
                 end_time = time.perf_counter_ns()
                 elapsed_time = (end_time - start_time) / 1_000_000  # Convert to milliseconds
                 times.append(elapsed_time)
-                print(f"Run {i+1}/15: {elapsed_time:.3f}ms", end="          \r")
+                filetimes[-1].append(elapsed_time)
+                print(f"Run {j+1}/15: {elapsed_time:.3f}ms", end="          \r")
+
+    
+    min_t = None
+    min_file = None
+    max_t = None
+    max_file = None
+    for i in range(len(files)):
+        avg_time = sum(filetimes[i]) / len(filetimes[i]) if filetimes[i] else 0
+        fileavgs.append(avg_time)
+        if min_t == None or avg_time < min_t:
+            min_t = avg_time
+            min_file = files[i]
+        if max_t == None or avg_time > max_t:
+            max_t = avg_time
+            max_file = files[i]
 
     avg = sum(times) / len(times) if times else 0
-    min_t = min(times) if times else 0
-    max_t = max(times) if times else 0
 
     print(f"Benchmark Results over {len(times)} files:")
-    print(f"Average time: {avg:.3f}ms")
-    print(f"Minimum time: {min_t:.3f}ms")
-    print(f"Maximum time: {max_t:.3f}ms")
+    print(f"Average time (All files): {avg:.3f}ms")
+    if min_file and min_t:
+        print(f"Minimum time (File avg): {min_t:.3f}ms ({min_file})")
+    if max_file and max_t:
+        print(f"Maximum time (File avg): {max_t:.3f}ms ({max_file})")
     return f"Average: {avg:.3f}ms, Min: {min_t:.3f}ms, Max: {max_t:.3f}ms, Totals: {len(times)} books"
 
 
