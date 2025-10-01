@@ -17,3 +17,4 @@ share/
 pyvenv.cfg
 cache.json
 bookdata.json
+cache.json
