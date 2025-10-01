@@ -13,7 +13,8 @@
 
 ## Usage
 
-> [!NOTE] For non-nvidia GPUs:
+> [!NOTE] 
+> For non-nvidia GPUs:
 > The code can still be ran, although it will be significantly slower. You'll need to install a version of pytorch that is CPU-only, which can be installed as shown below.
  > ```
 > pip uninstall torch
