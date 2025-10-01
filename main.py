@@ -56,10 +56,10 @@ match command:
             exit(1)
         
         # Parse each file with vectorize_book
-        import vectorize_book as vb
-        for file in txt_files:
-            print(f"Processing: {file}")
-            vb.parse_book(file, cachefile, debug=args.debug)
+        if not os.fork():
+            import vectorize_book as vb
+            for file in txt_files:
+                vb.parse_book(file, cachefile, debug=args.debug)
     case "stats":
         if param == "":
             __import__("book_stats").calc_stats("bookdata.json")
