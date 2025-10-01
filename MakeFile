@@ -31,7 +31,6 @@ testing:
 	$(GPP) $(GPPFlags) testing.cpp -o testing.exe -Ofast
 
 speedtest: 
-	rm -f speedtest
 	$(GPP) $(GPPFlags) speedtest.cpp -o speedtest -Ofast
-
+	
 all: clean main testing speedtest
