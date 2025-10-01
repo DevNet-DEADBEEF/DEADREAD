@@ -86,7 +86,8 @@ static void wc(int fd) {
     std::string largest_word = {};
 
     int exitWords = 0;
-    std::string title;
+    std::vector<char> title = {};
+    std::vector<char> titleHead = {};
     std::vector<char> exitbuf = {};
     std::vector<char> startBuf = {};
 
@@ -126,19 +127,23 @@ static void wc(int fd) {
             if (!inBook) {
                 if (!inHeader) {
                     if (!gotTitle){
-                        if (buf[i] == TITLE_STRING[startBuf.size()]){
-                            startBuf.push_back(buf[i]);
-                            if (startBuf.size() == TITLE_STRING.size()){
+                        if (buf[i] == TITLE_STRING[titleHead.size()]){
+                            titleHead.push_back(buf[i]);
+                            if (titleHead.size() == TITLE_STRING.size()){
                                 ++i;
                                 while(buf[i] != '\n'){
-                                    title += buf[i];
+                                    title.push_back(buf[i]);
                                     ++i;
                                 }
-                                std::cout << "Title: " << title << '\n';
+                                //std::cout << "Title: " << std::string(title.begin(), title.end()) << '\n';
                                 gotTitle = true;
                             }
+                        } else if (!titleHead.empty()) {
+                            // Mismatch after some matches, reset
+                            titleHead.clear();
+                            
                         }
-                    } else
+                    }
                     // Potential start of header
                     if (buf[i] == START_STRING[startBuf.size()]) {
                         // Potential end of book
@@ -281,7 +286,7 @@ static void wc(int fd) {
     auto t4 = time_now();
     double avgSenLen = sentenceNum ? (double)sentenceSum / sentenceNum : 0;
 
-    std::cout << title << " \\ ";
+    std::cout << std::string(title.begin(), title.end()) << " \\ ";
     for (size_t i = 0; i < top_words.size(); ++i){
         std::cout << top_words[i] << " ";
     }
@@ -341,6 +346,47 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    std::vector<std::string> bfStrs;
+    std::vector<int> files;
+    
+    if (std::filesystem::is_directory(argv[1])){
+        for (auto const& bookFile : std::filesystem::directory_iterator(argv[1])){
+            std::string bfStr = bookFile.path().string();
+            //std::cout << bfStr << '\n'; //DEBUG
+            if (bfStr.size() > 4 && bfStr.substr(bfStr.size()-4) != ".txt"){
+                std::cout << bfStr << " is not a .txt file!" << "\n";
+                continue;
+            }
+
+            int fd = open(bookFile.path().c_str(), O_RDONLY);
+            
+            if(fd == -1)
+                handle_error("open");
+
+            /* Advise the kernel of our access pattern.  */
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+
+            bfStrs.push_back(bfStr);
+            files.push_back(fd);
+        }
+    } else {
+        std::string arg(argv[1]);
+        if (arg.size() > 4 && arg.substr(arg.size()-4) != ".txt"){
+            std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
+            return 1;
+        }
+
+        int fd = open(argv[1], O_RDONLY);
+        if(fd == -1)
+            handle_error("open");
+
+        /* Advise the kernel of our access pattern.  */
+        posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
+
+        bfStrs.push_back(arg);
+        files.push_back(fd);
+    }
+
     if (argc == 3){
         std::string_view arg(argv[2]);
         if (arg.size() > 4 && arg.substr(arg.size()-4) != ".csv"){
@@ -359,40 +405,12 @@ int main(int argc, char* argv[]) {
         parse_csv(fin);
     }
 
-    if (std::filesystem::is_directory(argv[1])){
-        for (auto const& bookFile : std::filesystem::directory_iterator(argv[1])){
-            std::string bfStr = bookFile.path().string();
-            //std::cout << bfStr << '\n'; //DEBUG
-            if (bfStr.size() > 4 && bfStr.substr(bfStr.size()-4) != ".txt"){
-                std::cout << bfStr << " is not a .txt file!" << "\n";
-                continue;
-            }
+    for (int i = 0; i < files.size(); ++i){
 
-            int fd = open(bookFile.path().c_str(), O_RDONLY);
-            
-            if(fd == -1)
-                handle_error("open");
+        std::cout << bfStrs[i] << '\n'; //DEBUG
 
-            /* Advise the kernel of our access pattern.  */
-            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+        wc(files[i]);
 
-            wc(fd);
-            std::cout << '\n' << "--------------------------------------------------" << "\n\n"; //For readability.
-        }
-    } else {
-        std::string_view arg(argv[1]);
-        if (arg.size() > 4 && arg.substr(arg.size()-4) != ".txt"){
-            std::cerr << "Usage: " << argv[0] << " <txtfilename or txtfolder> <blacklistCSV>\n";
-            return 1;
-        }
-
-        int fd = open(argv[1], O_RDONLY);
-        if(fd == -1)
-            handle_error("open");
-
-        /* Advise the kernel of our access pattern.  */
-        posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);  // FDADVICE_SEQUENTIAL
-
-        wc(fd);
+        std::cout << '\n' << "--------------------------------------------------" << "\n\n"; //For readability.
     }
 }
