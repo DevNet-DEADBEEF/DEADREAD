@@ -10,3 +10,8 @@
 *.out
 *.obj
 .vscode/
+bin/
+__pycache__/
+lib/
+share/
+pyvenv.cfg

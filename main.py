@@ -15,7 +15,7 @@ parser.add_argument(
 )
 parser.add_argument("--debug", action="store_true", help="Enable debug output.")
 parser.add_argument(
-    "-f", "--cachefile", type=str, default="cache.pk", help="Path to the cache file."
+    "-f", "--cachefile", type=str, default="cache.json", help="Path to the cache file."
 )
 
 args = parser.parse_args()
@@ -37,7 +37,10 @@ match command:
         for file in param:
             vb.parse_book(file, cachefile, debug=args.debug)
     case "stats":
-        __import__("book_stats").calc_stats(cachefile, param[0])
+        if param == "":
+            __import__("book_stats").calc_stats(cachefile)
+        else:
+            __import__("book_stats").calc_stats_blacklist(cachefile, param[0])
     case "search":
         cache = __import__("vectorize_book").load_cache(cachefile)
         matches = __import__("vector_methods").sem_search(' '.join(param), cache["vec"], cache["books"])
